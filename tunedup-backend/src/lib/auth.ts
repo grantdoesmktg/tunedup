@@ -1,5 +1,5 @@
 import { randomBytes, createHmac } from 'crypto';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import prisma from './prisma';
 
 const SALT_ROUNDS = 12;
