@@ -39,11 +39,11 @@ class AuthService: ObservableObject {
 
     func requestMagicLink(email: String) async throws {
         let _ = try await apiClient.requestMagicLink(email: email)
-        authState = .awaitingMagicLink(email: email)
+        authState = .awaitingCode(email: email)
     }
 
-    func verifyMagicLink(token: String) async throws {
-        let response = try await apiClient.verifyMagicLink(token: token)
+    func verifyCode(email: String, code: String) async throws {
+        let response = try await apiClient.verifyCode(email: email, code: code)
 
         // Save to keychain
         keychain.saveSessionToken(response.sessionToken)
@@ -113,7 +113,7 @@ class AuthViewModel: ObservableObject {
 
         do {
             try await authService.requestMagicLink(email: email)
-            authState = .awaitingMagicLink(email: email)
+            authState = .awaitingCode(email: email)
         } catch {
             self.error = error.localizedDescription
         }
@@ -121,12 +121,12 @@ class AuthViewModel: ObservableObject {
         isLoading = false
     }
 
-    func verifyMagicLink(token: String) async {
+    func verifyCode(email: String, code: String) async {
         isLoading = true
         error = nil
 
         do {
-            try await authService.verifyMagicLink(token: token)
+            try await authService.verifyCode(email: email, code: code)
             authState = authService.authState
         } catch {
             self.error = error.localizedDescription

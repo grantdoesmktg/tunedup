@@ -26,7 +26,8 @@ struct AuthRequestLinkResponse: Codable {
 }
 
 struct AuthVerifyRequest: Codable {
-    let token: String
+    let email: String
+    let code: String
 }
 
 struct AuthVerifyResponse: Codable {
@@ -71,7 +72,7 @@ struct UsageResponse: Codable {
 enum AuthState: Equatable {
     case unknown
     case unauthenticated
-    case awaitingMagicLink(email: String)
+    case awaitingCode(email: String)
     case awaitingPin
     case authenticated(User)
 

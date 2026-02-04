@@ -34,7 +34,7 @@ struct RootView: View {
                         .scaleEffect(1.5)
                 }
 
-            case .unauthenticated, .awaitingMagicLink:
+            case .unauthenticated, .awaitingCode:
                 LoginView()
 
             case .awaitingPin:

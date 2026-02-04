@@ -16,7 +16,11 @@ export const requestLinkSchema = z.object({
 });
 
 export const verifySchema = z.object({
-  token: z.string().min(1, 'Token is required'),
+  email: emailSchema,
+  code: z
+    .string()
+    .length(6, 'Code must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'Code must contain only digits'),
 });
 
 export const pinSetSchema = z.object({

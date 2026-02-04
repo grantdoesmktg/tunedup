@@ -13,7 +13,8 @@ export interface RequestLinkResponse {
 }
 
 export interface VerifyRequest {
-  token: string;
+  email: string;
+  code: string;
 }
 
 export interface VerifyResponse {

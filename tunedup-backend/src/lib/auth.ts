@@ -1,4 +1,4 @@
-import { randomBytes, createHmac } from 'crypto';
+import { randomBytes, createHmac, randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from './prisma';
 
@@ -14,23 +14,13 @@ export function generateToken(length: number = 32): string {
   return randomBytes(length).toString('hex');
 }
 
-export function generateMagicLinkToken(): string {
-  const token = generateToken(32);
-  const secret = process.env.MAGIC_LINK_SECRET || '';
-  const signature = createHmac('sha256', secret).update(token).digest('hex').slice(0, 16);
-  return `${token}.${signature}`;
+export function generateVerificationCode(): string {
+  return String(randomInt(0, 1000000)).padStart(6, '0');
 }
 
-export function verifyMagicLinkSignature(fullToken: string): string | null {
-  const parts = fullToken.split('.');
-  if (parts.length !== 2) return null;
-
-  const [token, signature] = parts;
+function hashVerificationCode(email: string, code: string): string {
   const secret = process.env.MAGIC_LINK_SECRET || '';
-  const expectedSignature = createHmac('sha256', secret).update(token).digest('hex').slice(0, 16);
-
-  if (signature !== expectedSignature) return null;
-  return token;
+  return createHmac('sha256', secret).update(`${email}:${code}`).digest('hex');
 }
 
 // ============================================
@@ -38,28 +28,32 @@ export function verifyMagicLinkSignature(fullToken: string): string | null {
 // ============================================
 
 export async function createMagicLink(email: string): Promise<string> {
-  const token = generateMagicLinkToken();
+  const code = generateVerificationCode();
   const expiresAt = new Date(Date.now() + MAGIC_LINK_EXPIRY_MINUTES * 60 * 1000);
 
-  // Store the raw token part (without signature) in DB
-  const rawToken = token.split('.')[0];
+  const normalizedEmail = email.toLowerCase();
+  const token = hashVerificationCode(normalizedEmail, code);
+
   await prisma.magicLink.create({
     data: {
-      email: email.toLowerCase(),
-      token: rawToken,
+      email: normalizedEmail,
+      token,
       expiresAt,
     },
   });
 
-  return token;
+  return code;
 }
 
-export async function verifyMagicLink(fullToken: string): Promise<{ userId: string; email: string } | null> {
-  const rawToken = verifyMagicLinkSignature(fullToken);
-  if (!rawToken) return null;
+export async function verifyMagicLink(
+  email: string,
+  code: string
+): Promise<{ userId: string; email: string } | null> {
+  const normalizedEmail = email.toLowerCase();
+  const token = hashVerificationCode(normalizedEmail, code);
 
-  const magicLink = await prisma.magicLink.findUnique({
-    where: { token: rawToken },
+  const magicLink = await prisma.magicLink.findFirst({
+    where: { token, email: normalizedEmail },
   });
 
   if (!magicLink) return null;

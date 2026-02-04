@@ -1,12 +1,14 @@
 import SwiftUI
 
 // MARK: - Login View
-// Magic link authentication with email input
+// Email + 6-digit code authentication
 
 struct LoginView: View {
     @StateObject private var viewModel = AuthViewModel()
     @State private var email: String = ""
+    @State private var code: String = ""
     @FocusState private var isEmailFocused: Bool
+    @FocusState private var isCodeFocused: Bool
 
     var body: some View {
         ZStack {
@@ -71,9 +73,17 @@ struct LoginView: View {
                             }
                         )
 
-                    case .awaitingMagicLink(let sentEmail):
-                        MagicLinkSentSection(
+                    case .awaitingCode(let sentEmail):
+                        CodeSentSection(
                             email: sentEmail,
+                            code: $code,
+                            isCodeFocused: $isCodeFocused,
+                            isLoading: viewModel.isLoading,
+                            onVerify: {
+                                Task {
+                                    await viewModel.verifyCode(email: sentEmail, code: code)
+                                }
+                            },
                             onResend: {
                                 Task {
                                     await viewModel.requestMagicLink(email: sentEmail)
@@ -120,16 +130,6 @@ struct LoginView: View {
         }
         .onTapGesture {
             isEmailFocused = false
-        }
-        .onOpenURL { url in
-            // Handle magic link deep link
-            if url.scheme == "tunedup" && url.host == "auth" {
-                if let token = url.queryParameters?["token"] {
-                    Task {
-                        await viewModel.verifyMagicLink(token: token)
-                    }
-                }
-            }
         }
     }
 }
@@ -194,7 +194,7 @@ struct EmailInputSection: View {
                             .scaleEffect(0.8)
                     } else {
                         Image(systemName: "envelope")
-                        Text("Send Magic Link")
+                        Text("Send Code")
                     }
                 }
             }
@@ -204,10 +204,14 @@ struct EmailInputSection: View {
     }
 }
 
-// MARK: - Magic Link Sent Section
+// MARK: - Code Sent Section
 
-struct MagicLinkSentSection: View {
+struct CodeSentSection: View {
     let email: String
+    @Binding var code: String
+    var isCodeFocused: FocusState<Bool>.Binding
+    let isLoading: Bool
+    let onVerify: () -> Void
     let onResend: () -> Void
     let onChangeEmail: () -> Void
 
@@ -230,7 +234,7 @@ struct MagicLinkSentSection: View {
                     .font(TunedUpTheme.Typography.title2)
                     .foregroundColor(TunedUpTheme.Colors.textPrimary)
 
-                Text("We sent a magic link to")
+                Text("We sent a 6-digit code to")
                     .font(TunedUpTheme.Typography.body)
                     .foregroundColor(TunedUpTheme.Colors.textSecondary)
 
@@ -239,13 +243,58 @@ struct MagicLinkSentSection: View {
                     .foregroundColor(TunedUpTheme.Colors.cyan)
             }
 
+            // Code input
+            VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.sm) {
+                Text("CODE")
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                    .tracking(1)
+
+                TextField("123456", text: $code)
+                    .font(TunedUpTheme.Typography.body)
+                    .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .focused(isCodeFocused)
+                    .padding(TunedUpTheme.Spacing.md)
+                    .background(TunedUpTheme.Colors.cardSurface)
+                    .cornerRadius(TunedUpTheme.Radius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: TunedUpTheme.Radius.medium)
+                            .stroke(
+                                isCodeFocused.wrappedValue
+                                    ? TunedUpTheme.Colors.cyan
+                                    : TunedUpTheme.Colors.textTertiary.opacity(0.2),
+                                lineWidth: isCodeFocused.wrappedValue ? 2 : 1
+                            )
+                    )
+            }
+
+            Button(action: {
+                Haptics.impact(.medium)
+                onVerify()
+            }) {
+                HStack {
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: TunedUpTheme.Colors.pureBlack))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "checkmark.seal")
+                        Text("Verify Code")
+                    }
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(code.count != 6 || isLoading)
+
             // Actions
             VStack(spacing: TunedUpTheme.Spacing.sm) {
                 Button(action: {
                     Haptics.impact(.light)
                     onResend()
                 }) {
-                    Text("Resend Link")
+                    Text("Resend Code")
                 }
                 .buttonStyle(SecondaryButtonStyle())
 
@@ -259,20 +308,6 @@ struct MagicLinkSentSection: View {
             }
             .padding(.top, TunedUpTheme.Spacing.md)
         }
-    }
-}
-
-// MARK: - URL Extensions
-
-extension URL {
-    var queryParameters: [String: String]? {
-        guard let components = URLComponents(url: self, resolvingAgainstBaseURL: false),
-              let queryItems = components.queryItems else { return nil }
-        var params = [String: String]()
-        for item in queryItems {
-            params[item.name] = item.value
-        }
-        return params
     }
 }
 

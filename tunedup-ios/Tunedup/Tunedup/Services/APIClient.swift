@@ -33,8 +33,8 @@ class APIClient {
         return try await post("/api/auth/request-link", body: request)
     }
 
-    func verifyMagicLink(token: String) async throws -> AuthVerifyResponse {
-        let request = AuthVerifyRequest(token: token)
+    func verifyCode(email: String, code: String) async throws -> AuthVerifyResponse {
+        let request = AuthVerifyRequest(email: email, code: code)
         return try await post("/api/auth/verify", body: request)
     }
 

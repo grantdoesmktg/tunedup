@@ -9,12 +9,12 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { token } = validateRequest(verifySchema, body);
+    const { email, code } = validateRequest(verifySchema, body);
 
     // Verify magic link and get/create user
-    const result = await verifyMagicLink(token);
+    const result = await verifyMagicLink(email, code);
     if (!result) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid or expired code' }, { status: 401 });
     }
 
     // Create session
