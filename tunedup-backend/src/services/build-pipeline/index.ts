@@ -64,9 +64,9 @@ export async function runBuildPipeline(
     await prisma.build.update({
       where: { id: buildId },
       data: {
-        vehicleJson: stepA.vehicleProfile,
-        intentJson: stepA.userIntent,
-        assumptionsJson: stepA.assumptions,
+        vehicleJson: stepA.vehicleProfile as any,
+        intentJson: stepA.userIntent as any,
+        assumptionsJson: stepA.assumptions as any,
       },
     });
     onProgress({
@@ -84,7 +84,7 @@ export async function runBuildPipeline(
     await trackTokens(userId, resultB.tokensUsed);
     await prisma.build.update({
       where: { id: buildId },
-      data: { strategyJson: stepB },
+      data: { strategyJson: stepB as any },
     });
     onProgress({
       step: 'strategy',
@@ -101,7 +101,7 @@ export async function runBuildPipeline(
     await trackTokens(userId, resultC.tokensUsed);
     await prisma.build.update({
       where: { id: buildId },
-      data: { planJson: stepC },
+      data: { planJson: stepC as any },
     });
     onProgress({
       step: 'synergy',
@@ -119,7 +119,7 @@ export async function runBuildPipeline(
       await trackTokens(userId, resultD.tokensUsed);
       await prisma.build.update({
         where: { id: buildId },
-        data: { executionJson: stepD },
+        data: { executionJson: stepD as any },
       });
       onProgress({
         step: 'execution',
@@ -146,7 +146,7 @@ export async function runBuildPipeline(
       await trackTokens(userId, resultE.tokensUsed);
       await prisma.build.update({
         where: { id: buildId },
-        data: { performanceJson: stepE },
+        data: { performanceJson: stepE as any },
       });
       onProgress({
         step: 'performance',
@@ -173,7 +173,7 @@ export async function runBuildPipeline(
       await trackTokens(userId, resultF.tokensUsed);
       await prisma.build.update({
         where: { id: buildId },
-        data: { sourcingJson: stepF },
+        data: { sourcingJson: stepF as any },
       });
       onProgress({
         step: 'sourcing',
@@ -200,7 +200,7 @@ export async function runBuildPipeline(
     await prisma.build.update({
       where: { id: buildId },
       data: {
-        presentationJson: stepG,
+        presentationJson: stepG as any,
         pipelineStatus: 'completed',
       },
     });
