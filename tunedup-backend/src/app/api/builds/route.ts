@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       },
     });
 
-    const buildList: BuildListItem[] = builds.map((build) => {
+    const buildList: BuildListItem[] = builds.map((build: typeof builds[number]) => {
       const vehicle = build.vehicleJson as { year: number; make: string; model: string; trim: string };
       const presentation = build.presentationJson as StepGOutput | null;
       const performance = build.performanceJson as StepEOutput | null;
