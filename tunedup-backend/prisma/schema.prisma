@@ -1,0 +1,152 @@
+// TunedUp Prisma Schema
+// MVP v1 - Minimal, matches spec exactly
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_DIRECT")
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  pinHash   String?  // bcrypt hash, nullable until user sets PIN
+  createdAt DateTime @default(now())
+
+  sessions Session[]
+  builds   Build[]
+  usage    Usage[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique // 32-byte random hex, stored in iOS Keychain
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("sessions")
+}
+
+model MagicLink {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique // sent via email
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([email])
+  @@map("magic_links")
+}
+
+// ============================================
+// BUILDS
+// ============================================
+
+model Build {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Step A: Normalized input
+  vehicleJson Json // VehicleProfile
+  intentJson  Json // UserIntent
+
+  // Step B: Strategy (nullable for graceful degradation)
+  strategyJson Json?
+
+  // Step C: Synergy plan
+  planJson Json?
+
+  // Step D: Execution details
+  executionJson Json?
+
+  // Step E: Performance estimates
+  performanceJson Json?
+
+  // Step F: Sourcing queries
+  sourcingJson Json?
+
+  // Step G: Presentation
+  presentationJson Json? // Contains headline, summary, stageDescriptions
+
+  // Consolidated assumptions from all steps
+  assumptionsJson Json?
+
+  // Pipeline tracking
+  pipelineStatus String  @default("pending") // pending, running, completed, failed
+  failedStep     String? // which step failed, if any
+  errorMessage   String? // error details
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatThreads ChatThread[]
+
+  @@index([userId])
+  @@map("builds")
+}
+
+// ============================================
+// CHAT
+// ============================================
+
+model ChatThread {
+  id        String   @id @default(cuid())
+  userId    String
+  buildId   String
+  createdAt DateTime @default(now())
+
+  build    Build         @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([buildId])
+  @@index([userId])
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  threadId  String
+  role      String // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("chat_messages")
+}
+
+// ============================================
+// USAGE TRACKING
+// ============================================
+
+model Usage {
+  id          String  @id @default(cuid())
+  userId      String
+  monthKey    String  // "2024-01" format for monthly bucket
+  tokensUsed  Int     @default(0)
+  tokensLimit Int     @default(100000) // free tier default
+  warned50    Boolean @default(false)
+  warned10    Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey])
+  @@map("usage")
+}

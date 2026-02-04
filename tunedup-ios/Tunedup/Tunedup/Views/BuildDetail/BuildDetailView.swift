@@ -1,0 +1,698 @@
+import SwiftUI
+
+// MARK: - Build Detail View
+// Horizontal scrolling stages with full stats display
+
+struct BuildDetailView: View {
+    let buildId: String
+
+    @StateObject private var viewModel = BuildDetailViewModel()
+    @State private var selectedStage: Int = 0
+    @State private var showingChat = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            // Background
+            TunedUpTheme.Colors.pureBlack
+                .ignoresSafeArea()
+
+            if viewModel.isLoading {
+                LoadingView()
+            } else if let build = viewModel.build {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header with vehicle info
+                        BuildDetailHeader(
+                            build: build,
+                            onBack: { dismiss() }
+                        )
+
+                        // Performance stats
+                        if let performance = build.performance {
+                            PerformanceSection(
+                                performance: performance,
+                                selectedStage: selectedStage
+                            )
+                            .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                            .padding(.bottom, TunedUpTheme.Spacing.xl)
+                        }
+
+                        // Stage selector
+                        if let plan = build.plan {
+                            StageSelectorStrip(
+                                stages: plan.stages,
+                                selectedStage: $selectedStage
+                            )
+
+                            // Stage content
+                            StageDetailView(
+                                stage: plan.stages[safe: selectedStage],
+                                execution: build.execution,
+                                sourcing: build.sourcing
+                            )
+                            .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                            .id(selectedStage) // Force refresh on stage change
+                        }
+
+                        // Assumptions & Disclaimer
+                        if let assumptions = build.assumptions, !assumptions.isEmpty {
+                            AssumptionsSection(assumptions: assumptions)
+                                .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                                .padding(.top, TunedUpTheme.Spacing.xl)
+                        }
+
+                        // Bottom spacer for chat button
+                        Color.clear.frame(height: 100)
+                    }
+                }
+
+                // Floating chat button
+                VStack {
+                    Spacer()
+                    ChatFloatingButton(onTap: { showingChat = true })
+                }
+            } else if let error = viewModel.error {
+                ErrorView(message: error, onRetry: {
+                    Task { await viewModel.fetchBuild(buildId) }
+                })
+            }
+        }
+        .navigationBarHidden(true)
+        .task {
+            await viewModel.fetchBuild(buildId)
+        }
+        .sheet(isPresented: $showingChat) {
+            MechanicChatView(buildId: buildId)
+        }
+    }
+}
+
+// MARK: - Build Detail Header
+
+struct BuildDetailHeader: View {
+    let build: Build
+    let onBack: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            // Background gradient
+            LinearGradient(
+                colors: [
+                    TunedUpTheme.Colors.cyan.opacity(0.15),
+                    TunedUpTheme.Colors.pureBlack
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 200)
+
+            VStack(spacing: TunedUpTheme.Spacing.lg) {
+                // Nav bar
+                HStack {
+                    Button(action: {
+                        Haptics.impact(.light)
+                        onBack()
+                    }) {
+                        HStack(spacing: TunedUpTheme.Spacing.xs) {
+                            Image(systemName: "chevron.left")
+                            Text("Garage")
+                        }
+                        .font(TunedUpTheme.Typography.body)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    }
+
+                    Spacer()
+
+                    // Delete button
+                    Button(action: {
+                        Haptics.impact(.light)
+                        // TODO: Show delete confirmation
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 18))
+                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                            .frame(width: 44, height: 44)
+                    }
+                }
+                .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                .padding(.top, TunedUpTheme.Spacing.md)
+
+                // Vehicle name
+                VStack(spacing: TunedUpTheme.Spacing.xs) {
+                    Text("\(build.vehicle.year) \(build.vehicle.make)")
+                        .font(TunedUpTheme.Typography.subheadline)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+
+                    Text("\(build.vehicle.model) \(build.vehicle.trim)")
+                        .font(TunedUpTheme.Typography.largeTitle)
+                        .foregroundColor(TunedUpTheme.Colors.textPrimary)
+
+                    // Archetype badge
+                    if let strategy = build.strategy {
+                        Text(strategy.archetype)
+                            .font(TunedUpTheme.Typography.caption)
+                            .foregroundColor(TunedUpTheme.Colors.cyan)
+                            .padding(.horizontal, TunedUpTheme.Spacing.sm)
+                            .padding(.vertical, TunedUpTheme.Spacing.xs)
+                            .background(TunedUpTheme.Colors.cyan.opacity(0.15))
+                            .cornerRadius(TunedUpTheme.Radius.small)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Performance Section
+
+struct PerformanceSection: View {
+    let performance: PerformanceEstimate
+    let selectedStage: Int
+
+    var currentStagePerf: StagePerformance? {
+        performance.afterStage["\(selectedStage)"]
+    }
+
+    var body: some View {
+        VStack(spacing: TunedUpTheme.Spacing.lg) {
+            // Main gauges
+            HStack(spacing: TunedUpTheme.Spacing.xl) {
+                if let stagePerf = currentStagePerf {
+                    StatGauge(
+                        title: "Horsepower",
+                        beforeValue: performance.baseline.hp,
+                        afterValue: stagePerf.estimatedHp.midpoint,
+                        unit: "HP",
+                        color: TunedUpTheme.Colors.cyan
+                    )
+
+                    StatGauge(
+                        title: "Torque",
+                        beforeValue: performance.baseline.torque,
+                        afterValue: performance.baseline.torque + stagePerf.torqueGain.midpoint,
+                        unit: "LB-FT",
+                        color: TunedUpTheme.Colors.magenta
+                    )
+                } else {
+                    StatGauge(
+                        title: "Horsepower",
+                        beforeValue: performance.baseline.hp,
+                        afterValue: performance.baseline.hp,
+                        unit: "HP",
+                        color: TunedUpTheme.Colors.cyan
+                    )
+
+                    StatGauge(
+                        title: "Torque",
+                        beforeValue: performance.baseline.torque,
+                        afterValue: performance.baseline.torque,
+                        unit: "LB-FT",
+                        color: TunedUpTheme.Colors.magenta
+                    )
+                }
+            }
+
+            // 0-60 and 1/4 mile
+            HStack(spacing: TunedUpTheme.Spacing.md) {
+                if let stagePerf = currentStagePerf {
+                    BeforeAfterStat(
+                        label: "0-60 MPH",
+                        before: "\(performance.baseline.zeroToSixty.formattedOneDecimal)s",
+                        after: stagePerf.zeroToSixty.formatted,
+                        improvement: "-\((performance.baseline.zeroToSixty - stagePerf.zeroToSixty.low).formattedOneDecimal)s"
+                    )
+
+                    BeforeAfterStat(
+                        label: "1/4 Mile",
+                        before: "\(performance.baseline.quarterMile.time.formattedOneDecimal)s",
+                        after: stagePerf.quarterMile.time.formatted,
+                        improvement: "-\((performance.baseline.quarterMile.time - stagePerf.quarterMile.time.low).formattedOneDecimal)s"
+                    )
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Stage Selector Strip
+
+struct StageSelectorStrip: View {
+    let stages: [Stage]
+    @Binding var selectedStage: Int
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: TunedUpTheme.Spacing.sm) {
+                    ForEach(stages) { stage in
+                        StageTab(
+                            stage: stage,
+                            isSelected: selectedStage == stage.stageNumber,
+                            onTap: {
+                                Haptics.selection()
+                                withAnimation(TunedUpTheme.Animation.spring) {
+                                    selectedStage = stage.stageNumber
+                                }
+                            }
+                        )
+                        .id(stage.stageNumber)
+                    }
+                }
+                .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                .padding(.vertical, TunedUpTheme.Spacing.md)
+            }
+            .background(TunedUpTheme.Colors.darkSurface)
+            .onChange(of: selectedStage) { _, newValue in
+                withAnimation {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
+    }
+}
+
+struct StageTab: View {
+    let stage: Stage
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: TunedUpTheme.Spacing.xs) {
+                Text("STAGE \(stage.stageNumber)")
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(
+                        isSelected ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.textTertiary
+                    )
+                    .tracking(1)
+
+                Text(stage.name)
+                    .font(TunedUpTheme.Typography.bodyBold)
+                    .foregroundColor(
+                        isSelected ? TunedUpTheme.Colors.textPrimary : TunedUpTheme.Colors.textSecondary
+                    )
+
+                Text(stage.estimatedCost.formatted)
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
+            }
+            .padding(.horizontal, TunedUpTheme.Spacing.md)
+            .padding(.vertical, TunedUpTheme.Spacing.sm)
+            .background(
+                isSelected ? TunedUpTheme.Colors.cyan.opacity(0.1) : Color.clear
+            )
+            .cornerRadius(TunedUpTheme.Radius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: TunedUpTheme.Radius.medium)
+                    .stroke(
+                        isSelected ? TunedUpTheme.Colors.cyan : Color.clear,
+                        lineWidth: 1
+                    )
+            )
+        }
+    }
+}
+
+// MARK: - Stage Detail View
+
+struct StageDetailView: View {
+    let stage: Stage?
+    let execution: ExecutionPlan?
+    let sourcing: Sourcing?
+
+    var body: some View {
+        if let stage = stage {
+            VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.lg) {
+                // Stage description
+                Text(stage.description)
+                    .font(TunedUpTheme.Typography.body)
+                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    .padding(.top, TunedUpTheme.Spacing.md)
+
+                // Synergy groups
+                ForEach(stage.synergyGroups) { group in
+                    SynergyIndicator(
+                        synergyGroup: group,
+                        isExpanded: true
+                    )
+                }
+
+                // Mods list
+                VStack(spacing: TunedUpTheme.Spacing.md) {
+                    ForEach(stage.mods) { mod in
+                        ModDetailCard(
+                            mod: mod,
+                            execution: execution?.modExecutions.first { $0.modId == mod.id },
+                            sourcing: sourcing?.modSourcing.first { $0.modId == mod.id },
+                            synergyCount: stage.synergyGroups.filter { $0.modIds.contains(mod.id) }.count
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Mod Detail Card
+
+struct ModDetailCard: View {
+    let mod: Mod
+    let execution: ModExecution?
+    let sourcing: ModSourcing?
+    let synergyCount: Int
+
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header (always visible)
+            Button(action: {
+                Haptics.selection()
+                withAnimation(TunedUpTheme.Animation.spring) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
+                        HStack {
+                            Text(mod.name)
+                                .font(TunedUpTheme.Typography.bodyBold)
+                                .foregroundColor(TunedUpTheme.Colors.textPrimary)
+
+                            if synergyCount > 0 {
+                                ModSynergyBadge(count: synergyCount)
+                            }
+                        }
+
+                        Text(mod.category.capitalized)
+                            .font(TunedUpTheme.Typography.caption)
+                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: TunedUpTheme.Spacing.xs) {
+                        Text(mod.estimatedCost.formatted)
+                            .font(TunedUpTheme.Typography.dataCaption)
+                            .foregroundColor(TunedUpTheme.Colors.cyan)
+
+                        if let exec = execution {
+                            DIYBadge(diyable: exec.diyable, difficulty: exec.difficulty)
+                        }
+                    }
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 14))
+                        .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                        .padding(.leading, TunedUpTheme.Spacing.sm)
+                }
+                .padding(TunedUpTheme.Spacing.md)
+            }
+
+            // Expanded content
+            if isExpanded {
+                VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.md) {
+                    Divider()
+                        .background(TunedUpTheme.Colors.textTertiary.opacity(0.2))
+
+                    // Description
+                    Text(mod.description)
+                        .font(TunedUpTheme.Typography.footnote)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+
+                    // Justification
+                    HStack(alignment: .top, spacing: TunedUpTheme.Spacing.sm) {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(TunedUpTheme.Colors.warning)
+
+                        Text(mod.justification)
+                            .font(TunedUpTheme.Typography.footnote)
+                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    }
+
+                    // Execution details
+                    if let exec = execution {
+                        ExecutionDetails(execution: exec)
+                    }
+
+                    // Sourcing
+                    if let src = sourcing {
+                        SourcingDetails(sourcing: src)
+                    }
+                }
+                .padding(.horizontal, TunedUpTheme.Spacing.md)
+                .padding(.bottom, TunedUpTheme.Spacing.md)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(TunedUpTheme.Colors.cardSurface)
+        .cornerRadius(TunedUpTheme.Radius.medium)
+    }
+}
+
+struct DIYBadge: View {
+    let diyable: Bool
+    let difficulty: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: diyable ? "wrench.fill" : "building.2.fill")
+                .font(.system(size: 10))
+
+            Text(diyable ? "DIY \(difficulty)/5" : "Shop")
+                .font(TunedUpTheme.Typography.caption)
+        }
+        .foregroundColor(diyable ? TunedUpTheme.Colors.success : TunedUpTheme.Colors.warning)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            (diyable ? TunedUpTheme.Colors.success : TunedUpTheme.Colors.warning).opacity(0.15)
+        )
+        .cornerRadius(TunedUpTheme.Radius.small)
+    }
+}
+
+struct ExecutionDetails: View {
+    let execution: ModExecution
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.sm) {
+            Text("INSTALLATION")
+                .font(TunedUpTheme.Typography.caption)
+                .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                .tracking(1)
+
+            HStack(spacing: TunedUpTheme.Spacing.lg) {
+                // Time
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 12))
+                    Text(execution.timeEstimate.hours.formatted)
+                        .font(TunedUpTheme.Typography.caption)
+                }
+                .foregroundColor(TunedUpTheme.Colors.textSecondary)
+
+                // Difficulty
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { level in
+                        Circle()
+                            .fill(
+                                level <= execution.difficulty
+                                    ? TunedUpTheme.Colors.cyan
+                                    : TunedUpTheme.Colors.textTertiary.opacity(0.3)
+                            )
+                            .frame(width: 8, height: 8)
+                    }
+                }
+
+                // Labor cost if shop
+                if let labor = execution.shopLaborEstimate {
+                    Text("Labor: \(labor.formatted)")
+                        .font(TunedUpTheme.Typography.caption)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                }
+            }
+
+            // Risk notes
+            if !execution.riskNotes.isEmpty {
+                HStack(alignment: .top, spacing: TunedUpTheme.Spacing.xs) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 12))
+                        .foregroundColor(TunedUpTheme.Colors.warning)
+
+                    Text(execution.riskNotes.joined(separator: ". "))
+                        .font(TunedUpTheme.Typography.caption)
+                        .foregroundColor(TunedUpTheme.Colors.warning)
+                }
+            }
+        }
+        .padding(TunedUpTheme.Spacing.sm)
+        .background(TunedUpTheme.Colors.darkSurface)
+        .cornerRadius(TunedUpTheme.Radius.small)
+    }
+}
+
+struct SourcingDetails: View {
+    let sourcing: ModSourcing
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.sm) {
+            Text("PARTS")
+                .font(TunedUpTheme.Typography.caption)
+                .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                .tracking(1)
+
+            // Brands
+            HStack {
+                Text("Brands:")
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
+
+                Text(sourcing.reputableBrands.joined(separator: ", "))
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
+            }
+
+            // Search buttons
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: TunedUpTheme.Spacing.sm) {
+                    ForEach(sourcing.searchQueries, id: \.self) { query in
+                        SearchQueryButton(query: query)
+                    }
+                }
+            }
+        }
+        .padding(TunedUpTheme.Spacing.sm)
+        .background(TunedUpTheme.Colors.darkSurface)
+        .cornerRadius(TunedUpTheme.Radius.small)
+    }
+}
+
+struct SearchQueryButton: View {
+    let query: String
+
+    var body: some View {
+        Button(action: {
+            Haptics.impact(.light)
+            // Open search in browser
+            if let url = URL(string: "https://www.google.com/search?q=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                UIApplication.shared.open(url)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12))
+                Text("Search")
+                    .font(TunedUpTheme.Typography.caption)
+            }
+            .foregroundColor(TunedUpTheme.Colors.cyan)
+            .padding(.horizontal, TunedUpTheme.Spacing.sm)
+            .padding(.vertical, TunedUpTheme.Spacing.xs)
+            .background(TunedUpTheme.Colors.cyan.opacity(0.1))
+            .cornerRadius(TunedUpTheme.Radius.small)
+        }
+    }
+}
+
+// MARK: - Assumptions Section
+
+struct AssumptionsSection: View {
+    let assumptions: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.md) {
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                Text("Assumptions & Disclaimer")
+                    .font(TunedUpTheme.Typography.bodyBold)
+                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
+            }
+
+            ForEach(assumptions, id: \.self) { assumption in
+                HStack(alignment: .top, spacing: TunedUpTheme.Spacing.sm) {
+                    Text("•")
+                        .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                    Text(assumption)
+                        .font(TunedUpTheme.Typography.footnote)
+                        .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                }
+            }
+
+            Text("Estimates are approximate and depend on tune quality, installation, fuel, altitude, and driver skill. Always consult a professional before making modifications.")
+                .font(TunedUpTheme.Typography.caption)
+                .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                .italic()
+                .padding(.top, TunedUpTheme.Spacing.sm)
+        }
+        .padding(TunedUpTheme.Spacing.md)
+        .background(TunedUpTheme.Colors.cardSurface)
+        .cornerRadius(TunedUpTheme.Radius.medium)
+    }
+}
+
+// MARK: - Chat Floating Button
+
+struct ChatFloatingButton: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: {
+            Haptics.impact(.medium)
+            onTap()
+        }) {
+            HStack(spacing: TunedUpTheme.Spacing.sm) {
+                Image(systemName: "wrench.and.screwdriver")
+                    .font(.system(size: 20))
+                Text("Ask Mechanic")
+                    .font(TunedUpTheme.Typography.button)
+            }
+            .foregroundColor(TunedUpTheme.Colors.pureBlack)
+            .padding(.horizontal, TunedUpTheme.Spacing.lg)
+            .padding(.vertical, TunedUpTheme.Spacing.md)
+            .background(TunedUpTheme.Colors.cyan)
+            .cornerRadius(TunedUpTheme.Radius.pill)
+            .shadow(color: TunedUpTheme.Colors.cyan.opacity(0.4), radius: 12, y: 4)
+        }
+        .padding(.bottom, TunedUpTheme.Spacing.xl)
+    }
+}
+
+// MARK: - Error View
+
+struct ErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: TunedUpTheme.Spacing.lg) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(TunedUpTheme.Colors.error)
+
+            Text("Something went wrong")
+                .font(TunedUpTheme.Typography.title2)
+                .foregroundColor(TunedUpTheme.Colors.textPrimary)
+
+            Text(message)
+                .font(TunedUpTheme.Typography.body)
+                .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+
+            Button(action: onRetry) {
+                Text("Try Again")
+            }
+            .buttonStyle(SecondaryButtonStyle())
+            .frame(width: 150)
+        }
+        .padding(TunedUpTheme.Spacing.xl)
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    BuildDetailView(buildId: "test-id")
+}
