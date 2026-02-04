@@ -5,6 +5,8 @@ import { validateRequest, chatSchema, ValidationError } from '@/lib/validation';
 import { processChat } from '@/services/chat';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const session = await getSessionFromRequest(request);

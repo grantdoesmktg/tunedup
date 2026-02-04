@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { getSessionFromRequest } from '@/lib/auth';
 import { BuildDetailResponse } from '@/types/api';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================
 // GET /api/builds/:id - Get build detail
 // ============================================

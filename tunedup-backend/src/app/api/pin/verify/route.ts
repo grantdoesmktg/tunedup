@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSessionFromRequest, verifyUserPin, AuthError } from '@/lib/auth';
 import { validateRequest, pinVerifySchema, ValidationError } from '@/lib/validation';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const session = await getSessionFromRequest(request);

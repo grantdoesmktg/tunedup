@@ -7,6 +7,8 @@ import { runBuildPipeline } from '@/services/build-pipeline';
 import { BuildListResponse, BuildListItem } from '@/types/api';
 import { StepGOutput, StepEOutput } from '@/types/pipeline';
 
+export const dynamic = 'force-dynamic';
+
 const MAX_BUILDS = 3;
 
 // ============================================
