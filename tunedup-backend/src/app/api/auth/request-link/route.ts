@@ -3,6 +3,9 @@ import { Resend } from 'resend';
 import { createMagicLink } from '@/lib/auth';
 import { validateRequest, requestLinkSchema, ValidationError } from '@/lib/validation';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(request: Request) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'TunedUp <auth@tunedup.dev>';
