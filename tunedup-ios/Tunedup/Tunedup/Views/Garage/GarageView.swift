@@ -8,6 +8,7 @@ struct GarageView: View {
     @State private var selectedIndex: Int = 0
     @State private var showingWizard = false
     @State private var selectedBuildId: String?
+    @State private var showingLimitAlert = false
 
     var body: some View {
         NavigationStack {
@@ -58,7 +59,11 @@ struct GarageView: View {
                                 selectedBuildId = build.id
                             },
                             onNewBuildTap: {
-                                showingWizard = true
+                                if viewModel.canCreateNew {
+                                    showingWizard = true
+                                } else {
+                                    showingLimitAlert = true
+                                }
                             }
                         )
 
@@ -94,7 +99,8 @@ struct GarageView: View {
                 if newCount == 0 {
                     selectedIndex = 0
                 } else {
-                    selectedIndex = min(selectedIndex, max(0, newCount - 1))
+                    let maxIndex = newCount // includes add card
+                    selectedIndex = min(selectedIndex, max(0, maxIndex))
                 }
             }
             .fullScreenCover(isPresented: $showingWizard) {
@@ -108,6 +114,11 @@ struct GarageView: View {
             }
             .navigationDestination(item: $selectedBuildId) { buildId in
                 BuildDetailView(buildId: buildId)
+            }
+            .alert("Build limit reached", isPresented: $showingLimitAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("You can save up to 3 builds. Delete one to create a new build.")
             }
         }
     }
@@ -166,7 +177,7 @@ struct BuildCarousel: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let totalItems = builds.count + (canCreateNew ? 1 : 0)
+            let totalItems = builds.count + 1
 
             HStack(spacing: cardSpacing) {
                 // Existing builds
@@ -195,25 +206,23 @@ struct BuildCarousel: View {
                 }
 
                 // New build card
-                if canCreateNew {
-                    EmptyBuildCard(onTap: {
-                        if selectedIndex.wrappedValue == builds.count {
-                            onNewBuildTap()
-                        } else {
-                            withAnimation(TunedUpTheme.Animation.spring) {
-                                selectedIndex.wrappedValue = builds.count
-                            }
+                EmptyBuildCard(isEnabled: canCreateNew, onTap: {
+                    if selectedIndex.wrappedValue == builds.count {
+                        onNewBuildTap()
+                    } else {
+                        withAnimation(TunedUpTheme.Animation.spring) {
+                            selectedIndex.wrappedValue = builds.count
                         }
-                    })
-                        .frame(width: cardWidth)
-                        .rotation3DEffect(
-                            rotationAngle(for: builds.count, selected: selectedIndex.wrappedValue),
-                            axis: (x: 0, y: 1, z: 0),
-                            perspective: 0.5
-                        )
-                        .scaleEffect(scaleEffect(for: builds.count, selected: selectedIndex.wrappedValue))
-                        .opacity(opacityEffect(for: builds.count, selected: selectedIndex.wrappedValue))
-                }
+                    }
+                })
+                    .frame(width: cardWidth)
+                    .rotation3DEffect(
+                        rotationAngle(for: builds.count, selected: selectedIndex.wrappedValue),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.5
+                    )
+                    .scaleEffect(scaleEffect(for: builds.count, selected: selectedIndex.wrappedValue))
+                    .opacity(opacityEffect(for: builds.count, selected: selectedIndex.wrappedValue))
             }
             .padding(.horizontal, (geometry.size.width - cardWidth) / 2)
             .offset(x: -CGFloat(selectedIndex.wrappedValue) * (cardWidth + cardSpacing) + dragOffset)

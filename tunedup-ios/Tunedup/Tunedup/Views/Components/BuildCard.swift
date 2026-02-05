@@ -190,6 +190,7 @@ struct CardButtonStyle: ButtonStyle {
 // MARK: - Empty State Card
 
 struct EmptyBuildCard: View {
+    let isEnabled: Bool
     var onTap: () -> Void
 
     var body: some View {
@@ -214,16 +215,20 @@ struct EmptyBuildCard: View {
                             .strokeBorder(
                                 style: StrokeStyle(lineWidth: 2, dash: [10, 8])
                             )
-                            .foregroundColor(TunedUpTheme.Colors.textTertiary.opacity(0.7))
+                            .foregroundColor(
+                                isEnabled
+                                    ? TunedUpTheme.Colors.textTertiary.opacity(0.7)
+                                    : TunedUpTheme.Colors.textTertiary.opacity(0.3)
+                            )
                     )
 
                 HStack(spacing: TunedUpTheme.Spacing.md) {
                     VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
-                        Text("Create New Build")
+                        Text(isEnabled ? "Create New Build" : "Build Limit Reached")
                             .font(TunedUpTheme.Typography.title3)
-                            .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                            .foregroundColor(isEnabled ? TunedUpTheme.Colors.textPrimary : TunedUpTheme.Colors.textSecondary)
 
-                        Text("Swipe to add another build")
+                        Text(isEnabled ? "Swipe to add another build" : "Delete a build to add another")
                             .font(TunedUpTheme.Typography.footnote)
                             .foregroundColor(TunedUpTheme.Colors.textSecondary)
                     }
@@ -237,13 +242,17 @@ struct EmptyBuildCard: View {
                     Spacer()
                     ZStack {
                         Circle()
-                            .fill(TunedUpTheme.Colors.cyan)
+                            .fill(isEnabled ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.textTertiary.opacity(0.4))
                             .frame(width: 56, height: 56)
-                            .shadow(color: TunedUpTheme.Colors.cyan.opacity(0.4), radius: 12, y: 6)
+                            .shadow(
+                                color: isEnabled ? TunedUpTheme.Colors.cyan.opacity(0.4) : Color.clear,
+                                radius: 12,
+                                y: 6
+                            )
 
                         Image(systemName: "plus")
                             .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(TunedUpTheme.Colors.pureBlack)
+                            .foregroundColor(isEnabled ? TunedUpTheme.Colors.pureBlack : TunedUpTheme.Colors.textSecondary)
                     }
                     .offset(x: 24)
                 }
@@ -251,6 +260,7 @@ struct EmptyBuildCard: View {
             }
             .frame(height: 220)
         }
+        .disabled(!isEnabled)
         .buttonStyle(CardButtonStyle())
     }
 }
@@ -275,7 +285,7 @@ struct EmptyBuildCard: View {
                 onTap: {}
             )
 
-            EmptyBuildCard(onTap: {})
+            EmptyBuildCard(isEnabled: true, onTap: {})
         }
         .padding()
     }
