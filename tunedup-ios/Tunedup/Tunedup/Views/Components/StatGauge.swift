@@ -90,6 +90,11 @@ struct StatGauge: View {
                 animatedProgress = progress
             }
         }
+        .onChange(of: afterValue) { _, _ in
+            withAnimation(TunedUpTheme.Animation.spring) {
+                animatedProgress = progress
+            }
+        }
     }
 }
 

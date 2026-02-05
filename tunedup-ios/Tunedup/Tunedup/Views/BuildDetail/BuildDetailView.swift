@@ -235,6 +235,7 @@ struct PerformanceSection: View {
                     )
                 }
             }
+            .id(selectedStage) // Force re-create gauges on stage change for animation
 
             // 0-60 and 1/4 mile
             HStack(spacing: TunedUpTheme.Spacing.md) {
