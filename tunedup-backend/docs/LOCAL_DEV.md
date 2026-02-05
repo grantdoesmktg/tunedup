@@ -63,7 +63,7 @@ pnpm db:studio      # Open Prisma Studio GUI
 
 ## Testing API Endpoints
 
-### Request Magic Link
+### Request Email Code
 
 ```bash
 curl -X POST http://localhost:3000/api/auth/request-link \

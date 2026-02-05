@@ -241,7 +241,7 @@ model ChatMessage {
 ### Authentication
 
 #### POST /api/auth/request-link
-Sends magic link via Resend.
+Sends 6-digit email code via Resend.
 
 ```typescript
 // Request
@@ -252,7 +252,7 @@ Sends magic link via Resend.
 // Response 200
 {
   success: true,
-  message: "Check your email for login link"
+  message: "Check your email for your 6-digit code"
 }
 
 // Response 400
@@ -262,12 +262,13 @@ Sends magic link via Resend.
 ```
 
 #### POST /api/auth/verify
-Exchanges magic link token for session.
+Verifies email + code and returns a session.
 
 ```typescript
 // Request
 {
-  token: string  // from email link query param
+  email: string,
+  code: string  // 6-digit email code
 }
 
 // Response 200
@@ -282,7 +283,7 @@ Exchanges magic link token for session.
 
 // Response 401
 {
-  error: "Invalid or expired token"
+  error: "Invalid or expired code"
 }
 ```
 
@@ -1191,7 +1192,7 @@ MAGIC_LINK_SECRET="random-32-byte-hex"
 MAGIC_LINK_EXPIRY_MINUTES="15"
 
 # App
-APP_URL="https://tunedup.dev"           # for magic link URLs
+APP_URL="https://tunedup.dev"           # optional; used in emails/links if needed
 NODE_ENV="development"
 
 # Usage limits (tokens)
@@ -1201,14 +1202,8 @@ DEFAULT_TOKEN_LIMIT="100000"            # free tier monthly limit
 ### iOS (no secrets - all API calls go through backend)
 
 ```swift
-// Config.swift
-enum Config {
-    #if DEBUG
-    static let apiBaseURL = "http://localhost:3000"
-    #else
-    static let apiBaseURL = "https://api.tunedup.dev"
-    #endif
-}
+// APIClient.swift
+private let baseURL = "https://www.tunedup.dev"
 ```
 
 ---
@@ -1217,7 +1212,7 @@ enum Config {
 
 ### ✅ IN SCOPE (building this)
 
-- [x] Magic link auth via Resend
+- [x] 6-digit email code auth via Resend
 - [x] 4-digit PIN for quick login
 - [x] Session token stored in iOS Keychain
 - [x] Garage with up to 3 builds
@@ -1262,8 +1257,8 @@ enum Config {
 | Database | Neon Postgres | Serverless, no cold starts, Vercel-friendly, free tier |
 | Local DB | Docker Postgres | Avoid burning Neon CU-hours in dev |
 | Prisma connection | Pooled + direct | Pooled for queries, direct for migrations |
-| Auth | Magic link only | Simplest for MVP, no OAuth complexity |
-| PIN storage | bcrypt server-side | Secure, standard practice |
+| Auth | 6-digit email code | Simplest for MVP, no OAuth complexity |
+| PIN storage | bcryptjs server-side | Secure, standard practice |
 | Session storage | iOS Keychain | Secure local storage on device |
 | Build limit | 3 per user | Per spec, prevents abuse |
 | Token tracking | Server-side only | Users don't see "tokens" as concept |
@@ -1279,7 +1274,7 @@ enum Config {
 1. Initialize `tunedup-backend` repo with Next.js + Prisma
 2. Set up Docker Compose for local Postgres
 3. Create Prisma schema and run initial migration
-4. Implement auth routes (magic link + PIN)
+4. Implement auth routes (email code + PIN)
 5. Implement build pipeline with SSE streaming
 6. Initialize `tunedup-ios` repo with SwiftUI skeleton
 7. Implement iOS networking layer + SSE client

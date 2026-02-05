@@ -36,7 +36,7 @@ See [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) for detailed setup instructions.
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/request-link` - Send magic link email
+- `POST /api/auth/request-link` - Send 6-digit email code
 - `POST /api/auth/verify` - Exchange token for session
 
 ### PIN

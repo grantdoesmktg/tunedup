@@ -4,7 +4,7 @@ NON-NEGOTIABLE MVP REQUIREMENTS
 1) iOS app in SwiftUI, dark theme, snappy optimistic UI. Progressive loading with skeletons and step-by-step progress updates during build generation.
 2) Support ALL cars using AI reasoning. No curated per-car database required for v1. Allow missing data: the AI should infer and proceed with clear assumptions.
 3) A “Garage” that stores up to 3 saved builds per user. Each saved build shows: key stats, mod stages, justification, and a chat icon to talk to the mechanic about that build.
-4) Auth: magic link via Resend. After login, user can set a 4-digit PIN for quick login. Store a session token locally for faster login.
+4) Auth: 6-digit email code via Resend. After login, user can set a 4-digit PIN for quick login. Store a session token locally for faster login.
 5) Token usage tracking behind the scenes (do NOT expose “tokens” as a product concept). Warn user at 50% remaining and 10% remaining. Cut off at 0 until monthly reset. (Implement a simple monthly bucket per user.)
 6) Two-model setup (single provider): 
    - Workflow/build pipeline: Gemini 3 Pro (higher reasoning/context)
@@ -21,7 +21,7 @@ ARCHITECTURE REQUIREMENTS
 CORE USER FLOWS
 A) New Build Wizard -> Generate Build -> Save Build (if under 3) -> View Build Details -> Mechanic Chat
 B) Garage -> Select Build -> View details and chat
-C) Auth -> Magic link -> Set PIN -> session token
+C) Auth -> Email code -> Set PIN -> session token
 
 AI PIPELINE (MUST BE CHAINED PROMPTS)
 Implement build generation as a multi-step pipeline, each producing strict JSON validated by a schema. Steps:
@@ -43,8 +43,8 @@ ChatThread (optional minimal): id, userId, buildId, createdAt
 ChatMessage (optional minimal): id, threadId, role, content, createdAt
 
 ENDPOINTS
-- POST /api/auth/request-link (Resend)
-- POST /api/auth/verify
+- POST /api/auth/request-link (Resend email code)
+- POST /api/auth/verify (email + code)
 - POST /api/pin/set
 - POST /api/pin/verify
 - GET /api/builds

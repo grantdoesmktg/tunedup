@@ -6,7 +6,7 @@ See the main MVP_BOUNDARY.md in the backend repo for the full scope definition.
 
 ### Implemented
 - [x] Dark theme throughout
-- [x] Magic link login flow
+- [x] 6-digit email code login flow
 - [x] PIN entry for quick login
 - [x] Keychain storage for session tokens
 - [x] Garage view with build cards
@@ -27,7 +27,7 @@ See the main MVP_BOUNDARY.md in the backend repo for the full scope definition.
 - [ ] Xcode project file (needs manual creation)
 - [ ] App icon assets
 - [ ] Launch screen
-- [ ] URL scheme configuration for deep links
+- [ ] URL scheme configuration (optional; not required for email codes)
 - [ ] Push notification setup (out of MVP scope anyway)
 
 ### Out of Scope (MVP)

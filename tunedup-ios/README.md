@@ -54,7 +54,7 @@ TunedUp/
 ## Features
 
 ### Authentication
-- Magic link email login
+- 6-digit email code login
 - 4-digit PIN for quick re-login
 - Session tokens stored securely in Keychain
 
@@ -94,24 +94,8 @@ TunedUp/
 The API base URL is configured in `APIClient.swift`:
 
 ```swift
-#if DEBUG
-private let baseURL = "http://localhost:3000"
-#else
-private let baseURL = "https://api.tunedup.dev"
-#endif
+private let baseURL = "https://www.tunedup.dev"
 ```
-
-For local development, ensure the backend is running on `localhost:3000`.
-
-## Deep Links
-
-The app handles magic link authentication via URL scheme:
-
-```
-tunedup://auth/verify?token=xxx
-```
-
-Configure this in your Xcode project's URL Types.
 
 ## Theme
 

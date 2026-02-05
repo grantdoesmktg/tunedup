@@ -159,9 +159,9 @@ a short, human-readable summary text
 
 Backend (Vercel + Prisma) minimal endpoints
 
-POST /api/auth/request-link (Resend magic link)
+POST /api/auth/request-link (Resend email code)
 
-POST /api/auth/verify (exchange token)
+POST /api/auth/verify (verify email + code)
 
 POST /api/pin/set
 

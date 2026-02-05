@@ -6,7 +6,7 @@
 ## IN SCOPE (Building This)
 
 ### Authentication
-- [x] Magic link auth via Resend
+- [x] 6-digit email code auth via Resend
 - [x] 4-digit PIN for quick re-login
 - [x] Session tokens (30-day expiry)
 - [x] iOS Keychain storage for tokens

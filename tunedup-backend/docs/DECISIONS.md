@@ -32,16 +32,16 @@
 
 ## Authentication
 
-### Decision: Magic Link Only (No OAuth)
-**Choice:** Email magic links via Resend, no social login
+### Decision: Email Code Only (No OAuth)
+**Choice:** 6-digit email codes via Resend, no social login
 **Rationale:**
 - Simplest implementation for MVP
 - No OAuth complexity/maintenance
 - Users have email; not all have Google/Apple accounts
 - Can add OAuth providers later without breaking changes
 
-### Decision: bcrypt for PIN Hashing
-**Choice:** Server-side bcrypt with 12 salt rounds
+### Decision: bcryptjs for PIN Hashing
+**Choice:** Server-side bcryptjs with 12 salt rounds
 **Rationale:**
 - Industry standard for password hashing
 - 12 rounds balances security vs performance
@@ -52,7 +52,7 @@
 **Rationale:**
 - Balances security with convenience
 - iOS Keychain keeps token secure on device
-- User can re-auth with magic link if expired
+- User can re-auth with a new email code if expired
 
 ---
 

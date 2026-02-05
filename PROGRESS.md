@@ -20,7 +20,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 | Folder structure | ✅ Done | All directories created |
 | package.json + configs | ✅ Done | Next.js 14, Prisma, Zod, Resend, Gemini SDK |
 | Docker Compose (local Postgres) | ✅ Done | PostgreSQL 16 Alpine |
-| Prisma schema | ✅ Done | User, Session, MagicLink, Build, Usage, Chat models |
+| Prisma schema | ✅ Done | User, Session, MagicLink (email codes), Build, Usage, Chat models |
 | Prisma singleton client | ✅ Done | Prevents connection pool exhaustion |
 | Environment setup (.env.example) | ✅ Done | All variables documented |
 | Vercel deployment | ✅ Done | Build live; backend deployed |
@@ -28,8 +28,8 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 ### Auth System
 | Task | Status | Notes |
 |------|--------|-------|
-| Auth utilities (lib/auth.ts) | ✅ Done | Magic link, sessions, PIN hashing |
-| POST /api/auth/request-link | ✅ Done | Resend email integration |
+| Auth utilities (lib/auth.ts) | ✅ Done | Email code, sessions, PIN hashing |
+| POST /api/auth/request-link | ✅ Done | Resend email code integration |
 | POST /api/auth/verify | ✅ Done | Token exchange + user creation |
 | POST /api/pin/set | ✅ Done | bcryptjs hashing (serverless-safe) |
 | POST /api/pin/verify | ✅ Done | Session-authenticated |
@@ -88,7 +88,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 ### Screens
 | Task | Status | Notes |
 |------|--------|-------|
-| LoginView | ✅ Done | Email input + magic link + deep link handling |
+| LoginView | ✅ Done | Email input + 6-digit code |
 | PinEntryView | ✅ Done | Number pad + verification |
 | GarageView | ✅ Done | Build list + empty state + skeletons |
 | BuildCard | ✅ Done | Status badge, stats preview |
@@ -137,7 +137,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 |---------|--------|-------|
 | Docker Postgres setup | ✅ Tested | Fixed port conflict with local Postgres |
 | Prisma migrations | ✅ Tested | All 7 tables created successfully |
-| Magic link creation | ✅ Tested | Email flow working (Resend integration pending domain verification) |
+| Email code creation | ✅ Tested | Email flow working (Resend integration pending domain verification) |
 | Build pipeline (7 steps) | ✅ Tested | Complete build in ~60s, 32,558 tokens used |
 | SSE streaming | ✅ Tested | Real-time progress events working |
 | Database persistence | ✅ Tested | All pipeline outputs saved correctly |
@@ -147,7 +147,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 | SSE token logging | ✅ Tested | Per-step token totals emitted in SSE |
 
 ### 🐛 Bugs Fixed During Testing
-1. **bcrypt native module** - Required `npm rebuild bcrypt` after installation
+1. **bcrypt native module** - Replaced with `bcryptjs` to avoid native build failures
 2. **Local Postgres conflict** - Had to stop local Postgres to use Docker on port 5432
 3. **Gemini model names** - Changed from `gemini-2.5-pro-preview-05-06` → `gemini-2.5-pro`
 4. **Step G null check** - Fixed `stepE.caveats.join()` error when stepE is null
@@ -192,11 +192,10 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 ## Next Steps
 
 ### Immediate
-1. **Configure URL scheme** - `tunedup://` for magic link deep links
-2. **Set app entry view** - Ensure `TunedupApp.swift` points to desired first screen
-3. **Device networking** - Use Mac LAN IP in `APIClient.swift` + enable Local Network permission
-4. **Test auth flow** - Request magic link, verify, set PIN on device
-5. **Verify Resend domain** - Add DNS records in Vercel Domains
+1. **Set app entry view** - Ensure `TunedupApp.swift` points to desired first screen
+2. **Device networking** - Confirm production base URL in `APIClient.swift` and `SSEClient.swift`
+3. **Test auth flow** - Request email code, verify, set PIN on device
+4. **Verify Resend domain** - Add DNS records in Vercel Domains
 
 ### Before Launch
 1. Set up Neon database
@@ -204,7 +203,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 3. Configure Resend domain
 4. Get Gemini API keys
 5. TestFlight build
-6. Fix magic link email verification (domain setup)
+6. Fix email domain verification (Resend DNS setup)
 
 ---
 
