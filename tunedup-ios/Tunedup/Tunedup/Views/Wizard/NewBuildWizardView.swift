@@ -783,6 +783,10 @@ struct WizardGenerateButton: View {
 struct GeneratingOverlay: View {
     let currentStep: PipelineStep?
     let completedSteps: Set<PipelineStep>
+    @State private var quipText: String = ""
+    @State private var quipPool: [String] = []
+    @State private var quipIndex: Int = 0
+    private let quipTimer = Timer.publish(every: 3.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -824,20 +828,11 @@ struct GeneratingOverlay: View {
                 .opacity(0.6)
 
             VStack(spacing: TunedUpTheme.Spacing.xxl) {
-                // Animated logo/icon
-                ZStack {
-                    Circle()
-                        .fill(TunedUpTheme.Colors.cyan.opacity(0.1))
-                        .frame(width: 120, height: 120)
-
-                    CircuitTraceBackground(isAnimating: true)
-                        .frame(width: 100, height: 100)
-                        .clipShape(Circle())
-
-                    Image(systemName: "wrench.and.screwdriver")
-                        .font(.system(size: 40))
-                        .foregroundColor(TunedUpTheme.Colors.cyan)
-                }
+                // Dynamic build badge
+                BuildBadgeProgress(
+                    currentStep: currentStep,
+                    completedSteps: completedSteps
+                )
 
                 VStack(spacing: TunedUpTheme.Spacing.sm) {
                     Text("Building Your Plan")
@@ -845,10 +840,26 @@ struct GeneratingOverlay: View {
                         .foregroundColor(TunedUpTheme.Colors.textPrimary)
 
                     if let step = currentStep {
+                        Text(step.displayName)
+                            .font(TunedUpTheme.Typography.subheadline)
+                            .foregroundColor(TunedUpTheme.Colors.cyan)
+
                         Text(step.loadingMessage)
                             .font(TunedUpTheme.Typography.body)
                             .foregroundColor(TunedUpTheme.Colors.textSecondary)
                     }
+                }
+
+                // Mechanic quip ticker
+                if !quipText.isEmpty {
+                    Text(quipText)
+                        .font(TunedUpTheme.Typography.bodyBold)
+                        .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                        .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                        .padding(.vertical, TunedUpTheme.Spacing.sm)
+                        .background(TunedUpTheme.Colors.darkSurface.opacity(0.6))
+                        .cornerRadius(TunedUpTheme.Radius.medium)
+                        .transition(.opacity)
                 }
 
                 // Step progress
@@ -861,6 +872,117 @@ struct GeneratingOverlay: View {
             }
         }
         .transition(.opacity)
+        .onAppear {
+            updateQuips(for: currentStep)
+        }
+        .onChange(of: currentStep) { _, newValue in
+            updateQuips(for: newValue)
+        }
+        .onReceive(quipTimer) { _ in
+            guard !quipPool.isEmpty else { return }
+            quipIndex = (quipIndex + 1) % quipPool.count
+            withAnimation(TunedUpTheme.Animation.spring) {
+                quipText = quipPool[quipIndex]
+            }
+        }
+    }
+
+    private func updateQuips(for step: PipelineStep?) {
+        quipPool = quipsForStep(step)
+        quipIndex = 0
+        quipText = quipPool.first ?? ""
+    }
+
+    private func quipsForStep(_ step: PipelineStep?) -> [String] {
+        switch step {
+        case .normalize:
+            return [
+                "Alright, let's see what you're driving here...",
+                "Translating your input into shop-speak...",
+                "Okay, I know what you're working with."
+            ]
+        case .strategy:
+            return [
+                "Budget math with greasy fingerprints.",
+                "Picking the lane: fast, safe, or both.",
+                "Plotting the stages so it doesn't fall apart."
+            ]
+        case .synergy:
+            return [
+                "Making mods play nice together.",
+                "Stacking gains, not problems.",
+                "No explosions detected."
+            ]
+        case .execution:
+            return [
+                "Deciding what you can wrench vs what you should pay for.",
+                "If a bolt snaps, I don't wanna hear about it.",
+                "Garage-friendly or shop-only? Let's see."
+            ]
+        case .performance:
+            return [
+                "Running the napkin math and the reality check.",
+                "Power estimates without the hype.",
+                "Putting numbers on the grin factor."
+            ]
+        case .sourcing:
+            return [
+                "Hunting parts that won't explode in 3 months.",
+                "Brand roulette? Nah. We pick winners.",
+                "Building a parts list that doesn't suck."
+            ]
+        case .tone:
+            return [
+                "Making sure you can actually understand this.",
+                "Whoops, I wrote that in ancient hieroglyphics.",
+                "Error, error, error... lol jk it's fine."
+            ]
+        case .none:
+            return []
+        }
+    }
+}
+
+// MARK: - Build Badge Progress
+
+struct BuildBadgeProgress: View {
+    let currentStep: PipelineStep?
+    let completedSteps: Set<PipelineStep>
+
+    private let symbols: [(PipelineStep, String, Color)] = [
+        (.normalize, "shield.fill", TunedUpTheme.Colors.cyan),
+        (.strategy, "gearshape.2.fill", TunedUpTheme.Colors.cyan),
+        (.synergy, "bolt.fill", TunedUpTheme.Colors.magenta),
+        (.execution, "wrench.and.screwdriver", TunedUpTheme.Colors.cyan),
+        (.performance, "speedometer", TunedUpTheme.Colors.magenta),
+        (.sourcing, "cart.fill", TunedUpTheme.Colors.cyan),
+        (.tone, "checkmark.seal.fill", TunedUpTheme.Colors.cyan)
+    ]
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(TunedUpTheme.Colors.cyan.opacity(0.08))
+                .frame(width: 140, height: 140)
+
+            CircuitTraceBackground(isAnimating: true)
+                .frame(width: 120, height: 120)
+                .clipShape(Circle())
+
+            ForEach(symbols.indices, id: \.self) { index in
+                let item = symbols[index]
+                let isCompleted = completedSteps.contains(item.0)
+                let isCurrent = currentStep == item.0
+                Image(systemName: item.1)
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundColor(item.2)
+                    .opacity(isCompleted ? 1.0 : isCurrent ? 0.7 : 0.15)
+                    .scaleEffect(isCompleted ? 1.0 : isCurrent ? 1.05 : 0.9)
+                    .shadow(color: item.2.opacity(isCurrent ? 0.6 : 0.2), radius: isCurrent ? 12 : 4)
+                    .animation(TunedUpTheme.Animation.spring, value: isCompleted)
+                    .animation(TunedUpTheme.Animation.spring, value: isCurrent)
+            }
+        }
     }
 }
 

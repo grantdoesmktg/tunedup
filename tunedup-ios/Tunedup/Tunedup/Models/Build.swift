@@ -16,7 +16,7 @@ struct Build: Codable, Identifiable {
     let performance: PerformanceEstimate?
     let sourcing: Sourcing?
 
-    let presentation: String?
+    let presentation: BuildPresentation?
     let assumptions: [String]?
 }
 
@@ -310,6 +310,15 @@ struct ShopTypeInfo: Codable {
     let type: String
     let forMods: [String]
     let searchQuery: String
+}
+
+// MARK: - Presentation (Step G Output)
+
+struct BuildPresentation: Codable {
+    let headline: String
+    let summary: String
+    let stageDescriptions: [String: String]
+    let disclaimerText: String
 }
 
 // MARK: - Build Input Models

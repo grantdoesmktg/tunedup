@@ -23,7 +23,7 @@ enum PipelineStep: String, Codable, CaseIterable {
         case .normalize: return "Understanding"
         case .strategy: return "Planning"
         case .synergy: return "Optimizing"
-        case .execution: return "DIY Analysis"
+        case .execution: return "DIY vs Shop"
         case .performance: return "Estimating"
         case .sourcing: return "Parts List"
         case .tone: return "Final Polish"

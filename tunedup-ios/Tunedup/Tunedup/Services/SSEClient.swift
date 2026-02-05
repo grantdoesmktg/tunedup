@@ -8,11 +8,7 @@ class SSEClient: NSObject, URLSessionDataDelegate {
     private var task: URLSessionDataTask?
     private var buffer = ""
 
-    #if DEBUG
-    private let baseURL = "http://localhost:3000"
-    #else
-    private let baseURL = "https://api.tunedup.dev"
-    #endif
+    private let baseURL = "https://www.tunedup.dev"
 
     var onProgress: ((PipelineProgress) -> Void)?
     var onComplete: ((String) -> Void)? // buildId
