@@ -1,9 +1,11 @@
 import prisma from '@/lib/prisma';
-import { callChat } from '@/lib/gemini';
+import { callChat, estimateTokensForText } from '@/lib/gemini';
 import { trackTokens } from '@/lib/usage';
 
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_RESPONSE_WORDS = 300;
+const CONTEXT_TOKEN_LIMIT = Number(process.env.CHAT_CONTEXT_TOKEN_LIMIT || 8000);
+const CONTEXT_WARNING_RATIO = 0.5;
 
 interface BuildContext {
   vehicle: {
@@ -52,11 +54,70 @@ RULES:
 - Keep responses SHORT and punchy - no essays`;
 }
 
+function estimateContextTokens(
+  systemPrompt: string,
+  history: Array<{ role: 'user' | 'model'; content: string }>,
+  userMessage?: string
+): number {
+  const historyText = history.map((m) => `${m.role}: ${m.content}`).join('\n');
+  const combined = [systemPrompt, historyText, userMessage || ''].join('\n');
+  return estimateTokensForText(combined);
+}
+
+function buildContextFromBuild(build: {
+  vehicleJson: unknown;
+  presentationJson: unknown;
+  planJson: unknown;
+  assumptionsJson: unknown;
+}): BuildContext {
+  const vehicle = build.vehicleJson as { year: number; make: string; model: string; trim: string };
+  const presentation = build.presentationJson as { summary?: string } | null;
+  const plan = build.planJson as { stages?: Array<{ name: string; mods: Array<{ name: string }> }> } | null;
+  const assumptions = (build.assumptionsJson as string[]) || [];
+
+  return {
+    vehicle,
+    summary: presentation?.summary || null,
+    stages:
+      plan?.stages?.map((s) => ({
+        name: s.name,
+        mods: s.mods.map((m) => m.name),
+      })) || [],
+    assumptions,
+  };
+}
+
+export function buildSystemPromptFromBuild(build: {
+  vehicleJson: unknown;
+  presentationJson: unknown;
+  planJson: unknown;
+  assumptionsJson: unknown;
+}): string {
+  const context = buildContextFromBuild(build);
+  return buildSystemPrompt(context);
+}
+
+export function computeContextUsage(
+  systemPrompt: string,
+  history: Array<{ role: 'user' | 'model'; content: string }>,
+  userMessage?: string
+): { used: number; limit: number; percent: number; warning: boolean } {
+  const used = estimateContextTokens(systemPrompt, history, userMessage);
+  const limit = CONTEXT_TOKEN_LIMIT;
+  const percent = limit > 0 ? used / limit : 0;
+  return {
+    used,
+    limit,
+    percent,
+    warning: percent >= CONTEXT_WARNING_RATIO,
+  };
+}
+
 export async function processChat(
   userId: string,
   buildId: string,
   userMessage: string
-): Promise<{ reply: string; threadId: string; tokensUsed: number }> {
+): Promise<{ reply: string; threadId: string; tokensUsed: number; context: { used: number; limit: number; percent: number; warning: boolean } }> {
   // Get or create chat thread
   let thread = await prisma.chatThread.findFirst({
     where: { userId, buildId },
@@ -91,23 +152,7 @@ export async function processChat(
   }
 
   // Extract context
-  const vehicle = build.vehicleJson as { year: number; make: string; model: string; trim: string };
-  const presentation = build.presentationJson as { summary?: string } | null;
-  const plan = build.planJson as { stages?: Array<{ name: string; mods: Array<{ name: string }> }> } | null;
-  const assumptions = (build.assumptionsJson as string[]) || [];
-
-  const context: BuildContext = {
-    vehicle,
-    summary: presentation?.summary || null,
-    stages:
-      plan?.stages?.map((s) => ({
-        name: s.name,
-        mods: s.mods.map((m) => m.name),
-      })) || [],
-    assumptions,
-  };
-
-  const systemPrompt = buildSystemPrompt(context);
+  const systemPrompt = buildSystemPromptFromBuild(build);
 
   // Format history (reverse to chronological order)
   const history = thread.messages.reverse().map((m) => ({
@@ -137,9 +182,12 @@ export async function processChat(
   // Track tokens
   await trackTokens(userId, result.tokensUsed);
 
+  const contextUsage = computeContextUsage(systemPrompt, history, userMessage);
+
   return {
     reply: result.data,
     threadId: thread.id,
     tokensUsed: result.tokensUsed,
+    context: contextUsage,
   };
 }

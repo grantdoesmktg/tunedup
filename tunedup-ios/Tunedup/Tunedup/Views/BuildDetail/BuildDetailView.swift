@@ -193,19 +193,88 @@ struct PerformanceSection: View {
     let performance: PerformanceEstimate
     let selectedStage: Int
 
-    var currentStagePerf: StagePerformance? {
-        performance.afterStage["\(selectedStage)"]
+    private var orderedStages: [Int] {
+        performance.afterStage.keys.compactMap(Int.init).sorted()
+    }
+
+    private struct CumulativePerf {
+        let estimatedHp: Int?
+        let torque: Int?
+        let zeroToSixty: DoubleRange?
+        let quarterMileTime: DoubleRange?
+    }
+
+    private func cumulativePerf(upTo stage: Int) -> CumulativePerf {
+        var bestHp: ValueRange?
+        var torqueGainSum = 0
+        var bestZeroLow: Double?
+        var bestZeroHigh: Double?
+        var bestQuarterLow: Double?
+        var bestQuarterHigh: Double?
+
+        for s in orderedStages where s <= stage {
+            guard let perf = performance.afterStage["\(s)"] else { continue }
+
+            // Horsepower: keep the best (highest) estimate so stages are cumulative
+            if let current = bestHp {
+                if perf.estimatedHp.midpoint > current.midpoint {
+                    bestHp = perf.estimatedHp
+                }
+            } else {
+                bestHp = perf.estimatedHp
+            }
+
+            // Torque: sum stage gains so it never drops
+            torqueGainSum += perf.torqueGain.midpoint
+
+            // 0-60: take the best (lowest) range
+            if let low = bestZeroLow, let high = bestZeroHigh {
+                bestZeroLow = min(low, perf.zeroToSixty.low)
+                bestZeroHigh = min(high, perf.zeroToSixty.high)
+            } else {
+                bestZeroLow = perf.zeroToSixty.low
+                bestZeroHigh = perf.zeroToSixty.high
+            }
+
+            // 1/4 mile: take the best (lowest) time range
+            if let low = bestQuarterLow, let high = bestQuarterHigh {
+                bestQuarterLow = min(low, perf.quarterMile.time.low)
+                bestQuarterHigh = min(high, perf.quarterMile.time.high)
+            } else {
+                bestQuarterLow = perf.quarterMile.time.low
+                bestQuarterHigh = perf.quarterMile.time.high
+            }
+        }
+
+        let zeroRange = (bestZeroLow != nil && bestZeroHigh != nil)
+            ? DoubleRange(low: bestZeroLow!, high: bestZeroHigh!)
+            : nil
+
+        let quarterRange = (bestQuarterLow != nil && bestQuarterHigh != nil)
+            ? DoubleRange(low: bestQuarterLow!, high: bestQuarterHigh!)
+            : nil
+
+        let estimatedHp = bestHp?.midpoint
+        let torque = performance.baseline.torque + torqueGainSum
+
+        return CumulativePerf(
+            estimatedHp: estimatedHp,
+            torque: torqueGainSum == 0 ? nil : torque,
+            zeroToSixty: zeroRange,
+            quarterMileTime: quarterRange
+        )
     }
 
     var body: some View {
+        let cumulative = cumulativePerf(upTo: selectedStage)
         VStack(spacing: TunedUpTheme.Spacing.lg) {
             // Main gauges
             HStack(spacing: TunedUpTheme.Spacing.xl) {
-                if let stagePerf = currentStagePerf {
+                if let estimatedHp = cumulative.estimatedHp {
                     StatGauge(
                         title: "Horsepower",
                         beforeValue: performance.baseline.hp,
-                        afterValue: stagePerf.estimatedHp.midpoint,
+                        afterValue: estimatedHp,
                         unit: "HP",
                         color: TunedUpTheme.Colors.cyan
                     )
@@ -213,7 +282,7 @@ struct PerformanceSection: View {
                     StatGauge(
                         title: "Torque",
                         beforeValue: performance.baseline.torque,
-                        afterValue: performance.baseline.torque + stagePerf.torqueGain.midpoint,
+                        afterValue: cumulative.torque ?? performance.baseline.torque,
                         unit: "LB-FT",
                         color: TunedUpTheme.Colors.magenta
                     )
@@ -239,19 +308,20 @@ struct PerformanceSection: View {
 
             // 0-60 and 1/4 mile
             HStack(spacing: TunedUpTheme.Spacing.md) {
-                if let stagePerf = currentStagePerf {
+                if let zeroRange = cumulative.zeroToSixty,
+                   let quarterRange = cumulative.quarterMileTime {
                     BeforeAfterStat(
                         label: "0-60 MPH",
                         before: "\(performance.baseline.zeroToSixty.formattedOneDecimal)s",
-                        after: stagePerf.zeroToSixty.formatted,
-                        improvement: "-\((performance.baseline.zeroToSixty - stagePerf.zeroToSixty.low).formattedOneDecimal)s"
+                        after: zeroRange.formatted,
+                        improvement: "-\((performance.baseline.zeroToSixty - zeroRange.low).formattedOneDecimal)s"
                     )
 
                     BeforeAfterStat(
                         label: "1/4 Mile",
                         before: "\(performance.baseline.quarterMile.time.formattedOneDecimal)s",
-                        after: stagePerf.quarterMile.time.formatted,
-                        improvement: "-\((performance.baseline.quarterMile.time - stagePerf.quarterMile.time.low).formattedOneDecimal)s"
+                        after: quarterRange.formatted,
+                        improvement: "-\((performance.baseline.quarterMile.time - quarterRange.low).formattedOneDecimal)s"
                     )
                 }
             }

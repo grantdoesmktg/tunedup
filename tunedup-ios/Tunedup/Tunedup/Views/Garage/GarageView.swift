@@ -72,9 +72,6 @@ struct GarageView: View {
                         // Bottom action area
                         BottomActionArea(
                             selectedBuild: viewModel.builds[safe: selectedIndex],
-                            onChatTap: {
-                                // Navigate to chat
-                            },
                             onDetailsTap: {
                                 if let build = viewModel.builds[safe: selectedIndex] {
                                     selectedBuildId = build.id
@@ -275,7 +272,6 @@ struct BuildCarousel: View {
 
 struct BottomActionArea: View {
     let selectedBuild: BuildSummary?
-    let onChatTap: () -> Void
     let onDetailsTap: () -> Void
 
     var body: some View {
@@ -314,17 +310,6 @@ struct BottomActionArea: View {
                         }
                     }
                     .buttonStyle(SecondaryButtonStyle())
-
-                    Button(action: {
-                        Haptics.impact(.medium)
-                        onChatTap()
-                    }) {
-                        HStack {
-                            Image(systemName: "wrench.and.screwdriver")
-                            Text("Ask Mechanic")
-                        }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
                 }
             }
             .padding(.horizontal, TunedUpTheme.Spacing.lg)

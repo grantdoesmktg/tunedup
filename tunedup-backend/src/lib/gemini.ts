@@ -12,6 +12,8 @@ const FLASH_MODEL = process.env.GEMINI_FLASH_MODEL || 'gemini-2.5-flash-preview-
 interface GeminiResponse<T> {
   data: T;
   tokensUsed: number;
+  promptTokens?: number;
+  outputTokens?: number;
 }
 
 // Generation config for structured JSON output
@@ -102,11 +104,13 @@ export async function callPipelineStep<T>(
 
   // Get token usage
   const usageMetadata = response.usageMetadata;
+  const promptTokens = usageMetadata?.promptTokenCount;
+  const outputTokens = usageMetadata?.candidatesTokenCount;
   const tokensUsed = usageMetadata
-    ? (usageMetadata.promptTokenCount || 0) + (usageMetadata.candidatesTokenCount || 0)
-    : estimateTokens(prompt + text);
+    ? (promptTokens || 0) + (outputTokens || 0)
+    : estimateTokensForText(prompt + text);
 
-  return { data, tokensUsed };
+  return { data, tokensUsed, promptTokens, outputTokens };
 }
 
 // ============================================
@@ -142,18 +146,20 @@ export async function callChat(
   const text = response.text();
 
   const usageMetadata = response.usageMetadata;
+  const promptTokens = usageMetadata?.promptTokenCount;
+  const outputTokens = usageMetadata?.candidatesTokenCount;
   const tokensUsed = usageMetadata
-    ? (usageMetadata.promptTokenCount || 0) + (usageMetadata.candidatesTokenCount || 0)
-    : estimateTokens(systemPrompt + userMessage + text);
+    ? (promptTokens || 0) + (outputTokens || 0)
+    : estimateTokensForText(systemPrompt + userMessage + text);
 
-  return { data: text, tokensUsed };
+  return { data: text, tokensUsed, promptTokens, outputTokens };
 }
 
 // ============================================
 // Utilities
 // ============================================
 
-function estimateTokens(text: string): number {
+export function estimateTokensForText(text: string): number {
   // Rough estimate: ~4 chars per token
   return Math.ceil(text.length / 4);
 }

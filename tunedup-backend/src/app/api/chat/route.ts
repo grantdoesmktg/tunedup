@@ -2,10 +2,127 @@ import { NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/lib/auth';
 import { checkUsageBlocked } from '@/lib/usage';
 import { validateRequest, chatSchema, ValidationError } from '@/lib/validation';
-import { processChat } from '@/services/chat';
+import { buildSystemPromptFromBuild, computeContextUsage, processChat } from '@/services/chat';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
+
+// ============================================
+// GET /api/chat?buildId=... - Load chat history
+// ============================================
+
+export async function GET(request: Request) {
+  try {
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const buildId = searchParams.get('buildId');
+    if (!buildId) {
+      return NextResponse.json({ error: 'buildId is required' }, { status: 400 });
+    }
+
+    const build = await prisma.build.findUnique({
+      where: { id: buildId },
+      select: {
+        userId: true,
+        vehicleJson: true,
+        presentationJson: true,
+        planJson: true,
+        assumptionsJson: true,
+      },
+    });
+
+    if (!build) {
+      return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+    }
+
+    if (build.userId !== session.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const thread = await prisma.chatThread.findFirst({
+      where: { userId: session.userId, buildId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: 50,
+        },
+      },
+    });
+
+    const systemPrompt = buildSystemPromptFromBuild(build);
+    const history = (thread?.messages || []).map((m) => ({
+      role: m.role as 'user' | 'model',
+      content: m.content,
+    }));
+
+    const context = computeContextUsage(systemPrompt, history);
+
+    return NextResponse.json({
+      threadId: thread?.id || null,
+      messages: (thread?.messages || []).map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt.toISOString(),
+      })),
+      context,
+    });
+  } catch (error) {
+    console.error('Chat history error:', error);
+    return NextResponse.json({ error: 'Failed to load chat history' }, { status: 500 });
+  }
+}
+
+// ============================================
+// DELETE /api/chat?buildId=... - New chat (clear history)
+// ============================================
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const buildId = searchParams.get('buildId');
+    if (!buildId) {
+      return NextResponse.json({ error: 'buildId is required' }, { status: 400 });
+    }
+
+    const build = await prisma.build.findUnique({
+      where: { id: buildId },
+      select: { userId: true },
+    });
+
+    if (!build) {
+      return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+    }
+
+    if (build.userId !== session.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const thread = await prisma.chatThread.findFirst({
+      where: { userId: session.userId, buildId },
+      select: { id: true },
+    });
+
+    if (thread) {
+      await prisma.chatMessage.deleteMany({ where: { threadId: thread.id } });
+      await prisma.chatThread.delete({ where: { id: thread.id } });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Chat reset error:', error);
+    return NextResponse.json({ error: 'Failed to reset chat' }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -46,6 +163,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       reply: result.reply,
       threadId: result.threadId,
+      context: result.context,
     });
   } catch (error) {
     if (error instanceof ValidationError) {

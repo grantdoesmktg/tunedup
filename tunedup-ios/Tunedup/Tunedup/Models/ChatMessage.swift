@@ -31,6 +31,20 @@ struct ChatRequest: Codable {
 struct ChatResponse: Codable {
     let reply: String
     let threadId: String
+    let context: ChatContextUsage
+}
+
+struct ChatHistoryResponse: Codable {
+    let threadId: String?
+    let messages: [ChatMessage]
+    let context: ChatContextUsage
+}
+
+struct ChatContextUsage: Codable {
+    let used: Int
+    let limit: Int
+    let percent: Double
+    let warning: Bool
 }
 
 // MARK: - Chat Constants

@@ -9,6 +9,7 @@ struct MechanicChatView: View {
     @StateObject private var viewModel = ChatViewModel()
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isInputFocused: Bool
+    @State private var showingNewChatConfirm = false
 
     var body: some View {
         ZStack {
@@ -18,7 +19,17 @@ struct MechanicChatView: View {
 
             VStack(spacing: 0) {
                 // Header
-                ChatHeader(onClose: { dismiss() })
+                ChatHeader(
+                    onClose: { dismiss() },
+                    onNewChat: { showingNewChatConfirm = true }
+                )
+
+                if viewModel.showContextWarning {
+                    ContextWarningBanner(
+                        onClose: { viewModel.dismissContextWarning() }
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
                 // Messages
                 ScrollViewReader { proxy in
@@ -41,6 +52,12 @@ struct MechanicChatView: View {
                                 TypingIndicator()
                                     .id("typing")
                             }
+
+                            // Error message
+                            if let error = viewModel.error {
+                                ChatErrorBubble(message: error)
+                                    .id("error")
+                            }
                         }
                         .padding(.horizontal, TunedUpTheme.Spacing.lg)
                         .padding(.vertical, TunedUpTheme.Spacing.md)
@@ -54,6 +71,13 @@ struct MechanicChatView: View {
                         if isTyping {
                             withAnimation {
                                 proxy.scrollTo("typing", anchor: .bottom)
+                            }
+                        }
+                    }
+                    .onChange(of: viewModel.error) { _, newError in
+                        if newError != nil {
+                            withAnimation {
+                                proxy.scrollTo("error", anchor: .bottom)
                             }
                         }
                     }
@@ -76,6 +100,17 @@ struct MechanicChatView: View {
         .onTapGesture {
             isInputFocused = false
         }
+        .task {
+            await viewModel.loadHistory(buildId: buildId)
+        }
+        .alert("Start a new chat?", isPresented: $showingNewChatConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("New Chat", role: .destructive) {
+                Task { await viewModel.resetChat(buildId: buildId) }
+            }
+        } message: {
+            Text("This will clear the chat history for this build.")
+        }
     }
 }
 
@@ -83,6 +118,7 @@ struct MechanicChatView: View {
 
 struct ChatHeader: View {
     let onClose: () -> Void
+    let onNewChat: () -> Void
 
     var body: some View {
         HStack {
@@ -111,14 +147,32 @@ struct ChatHeader: View {
             Spacer()
 
             // Mechanic avatar
-            ZStack {
-                Circle()
-                    .fill(TunedUpTheme.Colors.cyan.opacity(0.2))
-                    .frame(width: 44, height: 44)
+            HStack(spacing: TunedUpTheme.Spacing.xs) {
+                Button(action: {
+                    Haptics.impact(.light)
+                    onNewChat()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("New Chat")
+                    }
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    .padding(.horizontal, TunedUpTheme.Spacing.sm)
+                    .padding(.vertical, TunedUpTheme.Spacing.xs)
+                    .background(TunedUpTheme.Colors.cardSurface)
+                    .cornerRadius(TunedUpTheme.Radius.pill)
+                }
 
-                Image(systemName: "wrench.and.screwdriver")
-                    .font(.system(size: 18))
-                    .foregroundColor(TunedUpTheme.Colors.cyan)
+                ZStack {
+                    Circle()
+                        .fill(TunedUpTheme.Colors.cyan.opacity(0.2))
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: "wrench.and.screwdriver")
+                        .font(.system(size: 18))
+                        .foregroundColor(TunedUpTheme.Colors.cyan)
+                }
             }
         }
         .padding(.horizontal, TunedUpTheme.Spacing.md)
@@ -239,23 +293,30 @@ struct ChatBubble: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: TunedUpTheme.Spacing.xs) {
                 // Message content
-                Text(message.content)
-                    .font(TunedUpTheme.Typography.body)
-                    .foregroundColor(isUser ? TunedUpTheme.Colors.pureBlack : TunedUpTheme.Colors.textPrimary)
-                    .padding(.horizontal, TunedUpTheme.Spacing.md)
-                    .padding(.vertical, TunedUpTheme.Spacing.sm)
-                    .background(
-                        isUser
-                            ? TunedUpTheme.Colors.cyan
-                            : TunedUpTheme.Colors.cardSurface
-                    )
-                    .cornerRadius(TunedUpTheme.Radius.medium)
-                    .if(!isUser) { view in
-                        view.overlay(
-                            RoundedRectangle(cornerRadius: TunedUpTheme.Radius.medium)
-                                .stroke(TunedUpTheme.Colors.magenta.opacity(0.3), lineWidth: 1)
-                        )
+                Group {
+                    if isUser {
+                        Text(message.content)
+                    } else {
+                        MarkdownText(message.content)
                     }
+                }
+                .font(TunedUpTheme.Typography.body)
+                .foregroundColor(isUser ? TunedUpTheme.Colors.pureBlack : TunedUpTheme.Colors.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, TunedUpTheme.Spacing.md)
+                .padding(.vertical, TunedUpTheme.Spacing.sm)
+                .background(
+                    isUser
+                        ? TunedUpTheme.Colors.cyan
+                        : TunedUpTheme.Colors.cardSurface
+                )
+                .cornerRadius(TunedUpTheme.Radius.medium)
+                .if(!isUser) { view in
+                    view.overlay(
+                        RoundedRectangle(cornerRadius: TunedUpTheme.Radius.medium)
+                            .stroke(TunedUpTheme.Colors.magenta.opacity(0.3), lineWidth: 1)
+                    )
+                }
 
                 // Timestamp
                 Text(message.createdAt.relativeFormatted)
@@ -267,6 +328,105 @@ struct ChatBubble: View {
                 Spacer(minLength: 60)
             }
         }
+    }
+}
+
+// MARK: - Markdown Text
+
+struct MarkdownText: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        if let attributed = try? AttributedString(
+            markdown: text,
+            options: AttributedString.MarkdownParsingOptions(
+                interpretedSyntax: .inlineOnlyPreservingWhitespace
+            )
+        ) {
+            Text(attributed)
+        } else {
+            Text(text)
+        }
+    }
+}
+
+// MARK: - Error Bubble
+
+struct ChatErrorBubble: View {
+    let message: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(TunedUpTheme.Colors.error)
+
+            Text(message)
+                .font(TunedUpTheme.Typography.caption)
+                .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, TunedUpTheme.Spacing.md)
+        .padding(.vertical, TunedUpTheme.Spacing.sm)
+        .background(TunedUpTheme.Colors.cardSurface)
+        .cornerRadius(TunedUpTheme.Radius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: TunedUpTheme.Radius.medium)
+                .stroke(TunedUpTheme.Colors.error.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Context Warning Banner
+
+struct ContextWarningBanner: View {
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(spacing: TunedUpTheme.Spacing.sm) {
+            Image(systemName: "fuelpump.fill")
+                .foregroundColor(TunedUpTheme.Colors.cyan)
+
+            Text("You pumped in a lot of ethanol and I haven't upgraded my fuel injectors (context window near limit).")
+                .font(TunedUpTheme.Typography.caption)
+                .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                .lineLimit(2)
+
+            Spacer()
+
+            Button(action: {
+                Haptics.impact(.light)
+                onClose()
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    .frame(width: 24, height: 24)
+            }
+        }
+        .padding(.horizontal, TunedUpTheme.Spacing.md)
+        .padding(.vertical, TunedUpTheme.Spacing.sm)
+        .background(
+            LinearGradient(
+                colors: [
+                    TunedUpTheme.Colors.cyan.opacity(0.15),
+                    TunedUpTheme.Colors.cardSurface
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: TunedUpTheme.Radius.medium)
+                .stroke(TunedUpTheme.Colors.cyan.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(TunedUpTheme.Radius.medium)
+        .padding(.horizontal, TunedUpTheme.Spacing.lg)
+        .padding(.vertical, TunedUpTheme.Spacing.sm)
     }
 }
 

@@ -119,6 +119,30 @@ export interface ChatRequest {
 export interface ChatResponse {
   reply: string;
   threadId: string;
+  context: {
+    used: number;
+    limit: number;
+    percent: number;
+    warning: boolean;
+  };
+}
+
+export interface ChatMessageItem {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface ChatHistoryResponse {
+  threadId: string | null;
+  messages: ChatMessageItem[];
+  context: {
+    used: number;
+    limit: number;
+    percent: number;
+    warning: boolean;
+  };
 }
 
 // Usage

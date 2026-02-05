@@ -42,14 +42,21 @@ export async function GET(request: Request) {
       const performance = build.performanceJson as StepEOutput | null;
       const intent = build.intentJson as { budget: number };
 
-      // Get HP gain from final stage
+      // Get best (cumulative) HP gain across stages
       let hpGainRange: [number, number] | null = null;
       if (performance?.afterStage) {
-        const stageKeys = Object.keys(performance.afterStage).map(Number);
-        const maxStage = Math.max(...stageKeys).toString();
-        const finalStage = performance.afterStage[maxStage];
-        if (finalStage?.hpGain) {
-          hpGainRange = [finalStage.hpGain.low, finalStage.hpGain.high];
+        let best: { low: number; high: number } | null = null;
+        let bestMid = -Infinity;
+        for (const stage of Object.values(performance.afterStage)) {
+          if (!stage?.hpGain) continue;
+          const mid = (stage.hpGain.low + stage.hpGain.high) / 2;
+          if (mid > bestMid) {
+            bestMid = mid;
+            best = { low: stage.hpGain.low, high: stage.hpGain.high };
+          }
+        }
+        if (best) {
+          hpGainRange = [best.low, best.high];
         }
       }
 

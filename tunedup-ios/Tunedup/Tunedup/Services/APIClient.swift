@@ -19,6 +19,21 @@ class APIClient {
         self.session = URLSession(configuration: config)
 
         self.decoder = JSONDecoder()
+        self.decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            let formatterWithFractional = ISO8601DateFormatter()
+            formatterWithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatterWithFractional.date(from: dateString) {
+                return date
+            }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+            throw APIError.decodingError(NSError(domain: "InvalidDate", code: 0))
+        }
         self.encoder = JSONEncoder()
     }
 
@@ -65,6 +80,16 @@ class APIClient {
     func sendChatMessage(buildId: String, message: String) async throws -> ChatResponse {
         let request = ChatRequest(buildId: buildId, message: message)
         return try await post("/api/chat", body: request, authenticated: true)
+    }
+
+    func getChatHistory(buildId: String) async throws -> ChatHistoryResponse {
+        let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+        return try await get("/api/chat?buildId=\(encoded)", authenticated: true)
+    }
+
+    func resetChat(buildId: String) async throws {
+        let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+        let _: SuccessResponse = try await delete("/api/chat?buildId=\(encoded)", authenticated: true)
     }
 
     // MARK: - Usage Endpoints

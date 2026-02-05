@@ -7,6 +7,10 @@ class ChatViewModel: ObservableObject {
     @Published var inputText: String = ""
     @Published var isTyping: Bool = false
     @Published var error: String?
+    @Published var showContextWarning: Bool = false
+    @Published var contextPercent: Double = 0
+    @Published var contextWarningDismissed: Bool = false
+    @Published var threadId: String?
 
     private let apiClient = APIClient.shared
 
@@ -39,6 +43,8 @@ class ChatViewModel: ObservableObject {
                 content: response.reply
             )
             messages.append(assistantMessage)
+            threadId = response.threadId
+            handleContextUsage(response.context)
         } catch let apiError as APIError {
             switch apiError {
             case .upgradeRequired:
@@ -54,6 +60,38 @@ class ChatViewModel: ObservableObject {
     }
 
     func loadHistory(buildId: String) async {
-        // TODO: Load chat history from API if needed
+        do {
+            let response = try await apiClient.getChatHistory(buildId: buildId)
+            messages = response.messages
+            threadId = response.threadId
+            handleContextUsage(response.context)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func resetChat(buildId: String) async {
+        do {
+            try await apiClient.resetChat(buildId: buildId)
+            messages = []
+            threadId = nil
+            error = nil
+            showContextWarning = false
+            contextWarningDismissed = false
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    func dismissContextWarning() {
+        contextWarningDismissed = true
+        showContextWarning = false
+    }
+
+    private func handleContextUsage(_ usage: ChatContextUsage) {
+        contextPercent = usage.percent
+        if usage.warning && !contextWarningDismissed {
+            showContextWarning = true
+        }
     }
 }
