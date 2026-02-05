@@ -139,3 +139,9 @@ extension Array {
         return indices.contains(index) ? self[index] : nil
     }
 }
+
+// MARK: - Notifications
+
+extension Notification.Name {
+    static let buildDeleted = Notification.Name("buildDeleted")
+}

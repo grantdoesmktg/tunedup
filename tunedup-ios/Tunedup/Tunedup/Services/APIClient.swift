@@ -57,7 +57,7 @@ class APIClient {
     }
 
     func deleteBuild(_ id: String) async throws {
-        let _: EmptyResponse = try await delete("/api/builds/\(id)", authenticated: true)
+        let _: SuccessResponse = try await delete("/api/builds/\(id)", authenticated: true)
     }
 
     // MARK: - Chat Endpoints
@@ -205,4 +205,6 @@ struct ErrorResponse: Decodable {
     let message: String?
 }
 
-struct EmptyResponse: Decodable {}
+struct SuccessResponse: Decodable {
+    let success: Bool?
+}

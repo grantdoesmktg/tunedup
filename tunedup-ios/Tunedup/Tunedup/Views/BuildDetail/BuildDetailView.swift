@@ -9,6 +9,8 @@ struct BuildDetailView: View {
     @StateObject private var viewModel = BuildDetailViewModel()
     @State private var selectedStage: Int = 0
     @State private var showingChat = false
+    @State private var showingDeleteConfirm = false
+    @State private var isDeleting = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -85,6 +87,22 @@ struct BuildDetailView: View {
         .sheet(isPresented: $showingChat) {
             MechanicChatView(buildId: buildId)
         }
+        .alert("Delete Build?", isPresented: $showingDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task {
+                    isDeleting = true
+                    let success = await viewModel.deleteBuild()
+                    isDeleting = false
+                    if success {
+                        NotificationCenter.default.post(name: .buildDeleted, object: buildId)
+                        dismiss()
+                    }
+                }
+            }
+        } message: {
+            Text("This cannot be undone.")
+        }
     }
 }
 
@@ -127,20 +145,21 @@ struct BuildDetailHeader: View {
                     // Delete button
                     Button(action: {
                         Haptics.impact(.light)
-                        // TODO: Show delete confirmation
+                        showingDeleteConfirm = true
                     }) {
-                        Image(systemName: "trash")
+                        Image(systemName: isDeleting ? "hourglass" : "trash")
                             .font(.system(size: 18))
                             .foregroundColor(TunedUpTheme.Colors.textTertiary)
                             .frame(width: 44, height: 44)
                     }
+                    .disabled(isDeleting)
                 }
                 .padding(.horizontal, TunedUpTheme.Spacing.lg)
                 .padding(.top, TunedUpTheme.Spacing.md)
 
                 // Vehicle name
                 VStack(spacing: TunedUpTheme.Spacing.xs) {
-                    Text("\(build.vehicle.year) \(build.vehicle.make)")
+                    Text("\(String(build.vehicle.year)) \(build.vehicle.make)")
                         .font(TunedUpTheme.Typography.subheadline)
                         .foregroundColor(TunedUpTheme.Colors.textSecondary)
 
@@ -375,10 +394,16 @@ struct ModDetailCard: View {
             }) {
                 HStack {
                     VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
-                        HStack {
+                        HStack(spacing: 6) {
                             Text(mod.name)
                                 .font(TunedUpTheme.Typography.bodyBold)
                                 .foregroundColor(TunedUpTheme.Colors.textPrimary)
+
+                            if let exec = execution, !exec.diyable {
+                                Image(systemName: "wrench.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(TunedUpTheme.Colors.warning)
+                            }
 
                             if synergyCount > 0 {
                                 ModSynergyBadge(count: synergyCount)
@@ -456,12 +481,20 @@ struct DIYBadge: View {
     let diyable: Bool
     let difficulty: Int
 
+    private var label: String {
+        if diyable {
+            return "Garage DIY \(difficulty)/5"
+        } else {
+            return "Pro Install"
+        }
+    }
+
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: diyable ? "wrench.fill" : "building.2.fill")
+            Image(systemName: diyable ? "house.fill" : "wrench.and.screwdriver.fill")
                 .font(.system(size: 10))
 
-            Text(diyable ? "DIY \(difficulty)/5" : "Shop")
+            Text(label)
                 .font(TunedUpTheme.Typography.caption)
         }
         .foregroundColor(diyable ? TunedUpTheme.Colors.success : TunedUpTheme.Colors.warning)
@@ -544,23 +577,14 @@ struct SourcingDetails: View {
                 .foregroundColor(TunedUpTheme.Colors.textTertiary)
                 .tracking(1)
 
-            // Brands
-            HStack {
-                Text("Brands:")
-                    .font(TunedUpTheme.Typography.caption)
-                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
-
-                Text(sourcing.reputableBrands.joined(separator: ", "))
-                    .font(TunedUpTheme.Typography.caption)
-                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
-            }
-
-            // Search buttons
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: TunedUpTheme.Spacing.sm) {
-                    ForEach(sourcing.searchQueries, id: \.self) { query in
-                        SearchQueryButton(query: query)
-                    }
+            // Brand links
+            FlowLayout(spacing: TunedUpTheme.Spacing.sm) {
+                ForEach(Array(zip(sourcing.reputableBrands, sourcing.searchQueries.prefix(sourcing.reputableBrands.count))), id: \.0) { brand, query in
+                    BrandLink(brand: brand, searchQuery: query)
+                }
+                // Extra search queries without a matching brand name
+                ForEach(Array(sourcing.searchQueries.dropFirst(sourcing.reputableBrands.count)), id: \.self) { query in
+                    BrandLink(brand: query, searchQuery: query)
                 }
             }
         }
@@ -570,29 +594,76 @@ struct SourcingDetails: View {
     }
 }
 
-struct SearchQueryButton: View {
-    let query: String
+struct BrandLink: View {
+    let brand: String
+    let searchQuery: String
 
     var body: some View {
         Button(action: {
             Haptics.impact(.light)
-            // Open search in browser
-            if let url = URL(string: "https://www.google.com/search?q=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+            if let url = URL(string: "https://www.google.com/search?q=\(searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
                 UIApplication.shared.open(url)
             }
         }) {
             HStack(spacing: 4) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                Text("Search")
+                Text(brand)
                     .font(TunedUpTheme.Typography.caption)
+                    .fontWeight(.medium)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 9, weight: .bold))
             }
             .foregroundColor(TunedUpTheme.Colors.cyan)
             .padding(.horizontal, TunedUpTheme.Spacing.sm)
-            .padding(.vertical, TunedUpTheme.Spacing.xs)
+            .padding(.vertical, 6)
             .background(TunedUpTheme.Colors.cyan.opacity(0.1))
             .cornerRadius(TunedUpTheme.Radius.small)
+            .overlay(
+                RoundedRectangle(cornerRadius: TunedUpTheme.Radius.small)
+                    .stroke(TunedUpTheme.Colors.cyan.opacity(0.25), lineWidth: 1)
+            )
         }
+    }
+}
+
+// Simple flow layout that wraps items to the next line
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrangeSubviews(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrangeSubviews(proposal: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
+        }
+    }
+
+    private func arrangeSubviews(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var maxX: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > maxWidth && x > 0 {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            positions.append(CGPoint(x: x, y: y))
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+            maxX = max(maxX, x - spacing)
+        }
+
+        return (CGSize(width: maxX, height: y + rowHeight), positions)
     }
 }
 

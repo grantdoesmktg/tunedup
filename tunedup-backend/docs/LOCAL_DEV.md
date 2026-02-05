@@ -3,7 +3,6 @@
 ## Prerequisites
 
 - Node.js 18+
-- Docker Desktop
 - pnpm (recommended) or npm
 
 ## Quick Start
@@ -22,18 +21,14 @@ cp .env.example .env.local
 ```
 
 Edit `.env.local` and set:
-- Keep DATABASE_URL pointing to local Docker (uncomment the local lines, comment Neon lines)
+- Use Neon connection strings for `DATABASE_URL` and `DATABASE_URL_DIRECT`
 - Add your RESEND_API_KEY (get from resend.com)
 - Add your GEMINI_API_KEY (get from Google AI Studio)
 - Generate secrets: `openssl rand -hex 32`
 
-### 3. Start Local Database
+### 3. Configure Neon Database
 
-```bash
-pnpm docker:up
-```
-
-This starts a PostgreSQL 16 container on port 5432.
+Create or use your Neon project and copy the pooled and direct connection strings into `.env.local`.
 
 ### 4. Initialize Database
 
@@ -53,8 +48,6 @@ Server runs at http://localhost:3000
 ## Database Commands
 
 ```bash
-pnpm docker:up      # Start Postgres container
-pnpm docker:down    # Stop Postgres container
 pnpm db:generate    # Regenerate Prisma client after schema changes
 pnpm db:push        # Push schema changes (dev only, no migration)
 pnpm db:migrate     # Create and apply migration (for production)
@@ -96,31 +89,17 @@ curl -X POST http://localhost:3000/api/builds \
   }'
 ```
 
-## Switching to Neon (Production Database)
+## Deployment (GitHub → Vercel)
 
-1. Create a Neon project at neon.tech
-2. Get the pooled and direct connection strings
-3. Update `.env.local`:
-
-```bash
-DATABASE_URL="postgresql://...?sslmode=require&pgbouncer=true"
-DATABASE_URL_DIRECT="postgresql://...?sslmode=require"
-```
-
-4. Run migrations: `pnpm db:migrate:prod`
+- Push to GitHub to trigger Vercel deploys.
+- Set the same Neon `DATABASE_URL` and `DATABASE_URL_DIRECT` in Vercel project environment variables.
+- Run migrations as needed with `pnpm db:migrate` from a trusted environment.
 
 ## Troubleshooting
 
 ### Prisma Client Issues
 ```bash
 pnpm db:generate
-```
-
-### Port 5432 Already in Use
-```bash
-pnpm docker:down
-# or kill other Postgres processes
-lsof -i :5432
 ```
 
 ### Connection Pool Exhaustion

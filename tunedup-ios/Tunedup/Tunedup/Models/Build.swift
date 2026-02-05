@@ -50,11 +50,11 @@ struct VehicleSummary: Codable {
     let trim: String
 
     var displayName: String {
-        "\(year) \(make) \(model)"
+        "\(String(year)) \(make) \(model)"
     }
 
     var fullName: String {
-        "\(year) \(make) \(model) \(trim)"
+        "\(String(year)) \(make) \(model) \(trim)"
     }
 }
 

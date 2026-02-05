@@ -199,24 +199,55 @@ struct EmptyBuildCard: View {
         }) {
             ZStack {
                 RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
-                    .fill(TunedUpTheme.Colors.darkSurface)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                TunedUpTheme.Colors.darkSurface,
+                                TunedUpTheme.Colors.cardSurface
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
                             .strokeBorder(
-                                style: StrokeStyle(lineWidth: 2, dash: [8, 8])
+                                style: StrokeStyle(lineWidth: 2, dash: [10, 8])
                             )
-                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                            .foregroundColor(TunedUpTheme.Colors.textTertiary.opacity(0.7))
                     )
 
-                VStack(spacing: TunedUpTheme.Spacing.md) {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 48, weight: .light))
-                        .foregroundColor(TunedUpTheme.Colors.cyan)
+                HStack(spacing: TunedUpTheme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
+                        Text("Create New Build")
+                            .font(TunedUpTheme.Typography.title3)
+                            .foregroundColor(TunedUpTheme.Colors.textPrimary)
 
-                    Text("New Build")
-                        .font(TunedUpTheme.Typography.title3)
-                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                        Text("Swipe to add another build")
+                            .font(TunedUpTheme.Typography.footnote)
+                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    }
+
+                    Spacer()
                 }
+                .padding(.horizontal, TunedUpTheme.Spacing.lg)
+
+                // Side plus button (Forza-style tab)
+                HStack {
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .fill(TunedUpTheme.Colors.cyan)
+                            .frame(width: 56, height: 56)
+                            .shadow(color: TunedUpTheme.Colors.cyan.opacity(0.4), radius: 12, y: 6)
+
+                        Image(systemName: "plus")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(TunedUpTheme.Colors.pureBlack)
+                    }
+                    .offset(x: 24)
+                }
+                .padding(.horizontal, TunedUpTheme.Spacing.lg)
             }
             .frame(height: 220)
         }

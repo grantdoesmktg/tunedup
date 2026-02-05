@@ -10,15 +10,28 @@ struct StatGauge: View {
     let unit: String
     let color: Color
 
+    private static let goldColor = Color(hex: "FFD700")
+
     @State private var animatedProgress: Double = 0
 
     private var gain: Int {
         afterValue - beforeValue
     }
 
+    // Stock = 50% fill. 2x stock = 100%. Clamped at 1.0.
     private var progress: Double {
         guard beforeValue > 0 else { return 0 }
-        return min(Double(afterValue) / Double(beforeValue * 2), 1.0) // Max at 2x baseline
+        return min(Double(afterValue) / Double(beforeValue * 2), 1.0)
+    }
+
+    // True when after value >= 2x stock
+    private var isOverflow: Bool {
+        guard beforeValue > 0 else { return false }
+        return afterValue >= beforeValue * 2
+    }
+
+    private var ringColor: Color {
+        isOverflow ? Self.goldColor : color
     }
 
     var body: some View {
@@ -36,11 +49,11 @@ struct StatGauge: View {
                 Circle()
                     .trim(from: 0, to: animatedProgress)
                     .stroke(
-                        color,
+                        ringColor,
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                    .shadow(color: color.opacity(0.5), radius: 4)
+                    .shadow(color: ringColor.opacity(0.5), radius: 4)
 
                 // Center content
                 VStack(spacing: 2) {
@@ -64,7 +77,7 @@ struct StatGauge: View {
                 HStack(spacing: 4) {
                     Text("+\(gain)")
                         .font(TunedUpTheme.Typography.dataCaption)
-                        .foregroundColor(color)
+                        .foregroundColor(ringColor)
 
                     Text("from \(beforeValue)")
                         .font(TunedUpTheme.Typography.caption)
@@ -179,12 +192,14 @@ struct BeforeAfterStat: View {
                 .font(TunedUpTheme.Typography.caption)
                 .foregroundColor(TunedUpTheme.Colors.textTertiary)
 
-            HStack(spacing: TunedUpTheme.Spacing.md) {
+            HStack(spacing: TunedUpTheme.Spacing.sm) {
                 // Before
                 VStack(spacing: 2) {
                     Text(before)
-                        .font(TunedUpTheme.Typography.dataMedium)
+                        .font(TunedUpTheme.Typography.dataSmall)
                         .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("STOCK")
                         .font(TunedUpTheme.Typography.caption)
                         .foregroundColor(TunedUpTheme.Colors.textTertiary)
@@ -192,14 +207,16 @@ struct BeforeAfterStat: View {
 
                 // Arrow
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(TunedUpTheme.Colors.cyan)
 
                 // After
                 VStack(spacing: 2) {
                     Text(after)
-                        .font(TunedUpTheme.Typography.dataMedium)
+                        .font(TunedUpTheme.Typography.dataSmall)
                         .foregroundColor(TunedUpTheme.Colors.cyan)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("MODDED")
                         .font(TunedUpTheme.Typography.caption)
                         .foregroundColor(TunedUpTheme.Colors.cyan.opacity(0.7))
@@ -210,11 +227,14 @@ struct BeforeAfterStat: View {
             Text(improvement)
                 .font(TunedUpTheme.Typography.dataCaption)
                 .foregroundColor(TunedUpTheme.Colors.success)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .padding(.horizontal, TunedUpTheme.Spacing.sm)
                 .padding(.vertical, TunedUpTheme.Spacing.xs)
                 .background(TunedUpTheme.Colors.success.opacity(0.15))
                 .cornerRadius(TunedUpTheme.Radius.small)
         }
+        .frame(maxWidth: .infinity)
         .padding(TunedUpTheme.Spacing.md)
         .background(TunedUpTheme.Colors.cardSurface)
         .cornerRadius(TunedUpTheme.Radius.medium)

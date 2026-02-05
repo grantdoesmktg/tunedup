@@ -87,6 +87,16 @@ struct GarageView: View {
             .task {
                 await viewModel.fetchBuilds()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .buildDeleted)) { _ in
+                Task { await viewModel.fetchBuilds() }
+            }
+            .onChange(of: viewModel.builds) { _, newValue in
+                if newValue.isEmpty {
+                    selectedIndex = 0
+                } else {
+                    selectedIndex = min(selectedIndex, max(0, newValue.count - 1))
+                }
+            }
             .fullScreenCover(isPresented: $showingWizard) {
                 NewBuildWizardView(onComplete: { buildId in
                     showingWizard = false
@@ -186,7 +196,15 @@ struct BuildCarousel: View {
 
                 // New build card
                 if canCreateNew {
-                    EmptyBuildCard(onTap: onNewBuildTap)
+                    EmptyBuildCard(onTap: {
+                        if selectedIndex.wrappedValue == builds.count {
+                            onNewBuildTap()
+                        } else {
+                            withAnimation(TunedUpTheme.Animation.spring) {
+                                selectedIndex.wrappedValue = builds.count
+                            }
+                        }
+                    })
                         .frame(width: cardWidth)
                         .rotation3DEffect(
                             rotationAngle(for: builds.count, selected: selectedIndex.wrappedValue),

@@ -17,7 +17,6 @@ tunedup-backend/
 ├── next.config.js
 ├── package.json
 ├── tsconfig.json
-├── docker-compose.yml      # local Postgres for dev
 ├── prisma/
 │   ├── schema.prisma
 │   └── migrations/
@@ -1169,13 +1168,9 @@ class SSEClient: NSObject, URLSessionDataDelegate {
 ### Backend (.env.example)
 
 ```bash
-# Database - Neon
+# Database - Neon (dev + prod)
 DATABASE_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/tunedup?sslmode=require&pgbouncer=true"
 DATABASE_URL_DIRECT="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/tunedup?sslmode=require"
-
-# Local dev database (Docker)
-# DATABASE_URL="postgresql://postgres:postgres@localhost:5432/tunedup"
-# DATABASE_URL_DIRECT="postgresql://postgres:postgres@localhost:5432/tunedup"
 
 # Resend (email)
 RESEND_API_KEY="re_xxx"
@@ -1205,6 +1200,11 @@ DEFAULT_TOKEN_LIMIT="100000"            # free tier monthly limit
 // APIClient.swift
 private let baseURL = "https://www.tunedup.dev"
 ```
+
+### Deployment
+
+- Backend deploys from GitHub to Vercel.
+- Set `DATABASE_URL`, `DATABASE_URL_DIRECT`, and all secrets in Vercel project environment variables.
 
 ---
 
@@ -1255,7 +1255,6 @@ private let baseURL = "https://www.tunedup.dev"
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Database | Neon Postgres | Serverless, no cold starts, Vercel-friendly, free tier |
-| Local DB | Docker Postgres | Avoid burning Neon CU-hours in dev |
 | Prisma connection | Pooled + direct | Pooled for queries, direct for migrations |
 | Auth | 6-digit email code | Simplest for MVP, no OAuth complexity |
 | PIN storage | bcryptjs server-side | Secure, standard practice |
@@ -1272,7 +1271,7 @@ private let baseURL = "https://www.tunedup.dev"
 ## Next Steps
 
 1. Initialize `tunedup-backend` repo with Next.js + Prisma
-2. Set up Docker Compose for local Postgres
+2. Connect Neon database (dev + prod) and set env vars
 3. Create Prisma schema and run initial migration
 4. Implement auth routes (email code + PIN)
 5. Implement build pipeline with SSE streaming

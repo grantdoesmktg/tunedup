@@ -1,6 +1,6 @@
 # TunedUp MVP Build Progress
 
-> Last updated: 2026-02-04
+> Last updated: 2026-02-05
 
 ## Overall Status: ✅ Scaffold Complete
 
@@ -19,11 +19,12 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 |------|--------|-------|
 | Folder structure | ✅ Done | All directories created |
 | package.json + configs | ✅ Done | Next.js 14, Prisma, Zod, Resend, Gemini SDK |
-| Docker Compose (local Postgres) | ✅ Done | PostgreSQL 16 Alpine |
+| Neon Postgres (dev + prod) | ✅ Done | Single provider for all environments |
 | Prisma schema | ✅ Done | User, Session, MagicLink (email codes), Build, Usage, Chat models |
 | Prisma singleton client | ✅ Done | Prevents connection pool exhaustion |
 | Environment setup (.env.example) | ✅ Done | All variables documented |
 | Vercel deployment | ✅ Done | Build live; backend deployed |
+| GitHub → Vercel deploys | ✅ Done | Pushes to GitHub trigger Vercel |
 
 ### Auth System
 | Task | Status | Notes |
@@ -135,7 +136,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 ### ✅ Verified Working
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Docker Postgres setup | ✅ Tested | Fixed port conflict with local Postgres |
+| Neon Postgres connectivity | ✅ Tested | Pooled + direct URLs validated |
 | Prisma migrations | ✅ Tested | All 7 tables created successfully |
 | Email code creation | ✅ Tested | Email flow working (Resend integration pending domain verification) |
 | Build pipeline (7 steps) | ✅ Tested | Complete build in ~60s, 32,558 tokens used |
@@ -148,10 +149,9 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 
 ### 🐛 Bugs Fixed During Testing
 1. **bcrypt native module** - Replaced with `bcryptjs` to avoid native build failures
-2. **Local Postgres conflict** - Had to stop local Postgres to use Docker on port 5432
-3. **Gemini model names** - Changed from `gemini-2.5-pro-preview-05-06` → `gemini-2.5-pro`
-4. **Step G null check** - Fixed `stepE.caveats.join()` error when stepE is null
-5. **Vercel build failure** - Switched to `bcryptjs` to avoid native module build errors
+2. **Gemini model names** - Changed from `gemini-2.5-pro-preview-05-06` → `gemini-2.5-pro`
+3. **Step G null check** - Fixed `stepE.caveats.join()` error when stepE is null
+4. **Vercel build failure** - Switched to `bcryptjs` to avoid native module build errors
 
 ### 💰 Performance & Cost Analysis
 - **Build time:** ~60+ seconds (user patience concern)
@@ -198,12 +198,10 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 4. **Verify Resend domain** - Add DNS records in Vercel Domains
 
 ### Before Launch
-1. Set up Neon database
-2. Deploy backend to Vercel
-3. Configure Resend domain
-4. Get Gemini API keys
-5. TestFlight build
-6. Fix email domain verification (Resend DNS setup)
+1. Configure Resend domain
+2. Get Gemini API keys
+3. TestFlight build
+4. Fix email domain verification (Resend DNS setup)
 
 ---
 

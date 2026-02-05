@@ -5,19 +5,16 @@ Next.js API backend for TunedUp - AI-powered car modification build planner.
 ## Tech Stack
 
 - **Framework:** Next.js 14 (App Router)
-- **Database:** PostgreSQL via Prisma
+- **Database:** Neon Postgres via Prisma (dev + prod)
 - **AI:** Google Gemini (3 Pro for pipeline, 2.5 Flash for chat)
 - **Email:** Resend
-- **Hosting:** Vercel
+- **Hosting:** Vercel (deploys from GitHub)
 
 ## Quick Start
 
 ```bash
 # Install dependencies
 pnpm install
-
-# Start local Postgres
-pnpm docker:up
 
 # Setup environment
 cp .env.example .env.local
@@ -99,9 +96,6 @@ pnpm build        # Production build
 pnpm start        # Start production server
 pnpm lint         # Run linter
 pnpm typecheck    # Type checking
-
-pnpm docker:up    # Start local Postgres
-pnpm docker:down  # Stop local Postgres
 
 pnpm db:generate  # Generate Prisma client
 pnpm db:push      # Push schema (dev)

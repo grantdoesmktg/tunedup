@@ -6,12 +6,12 @@
 
 ## Database
 
-### Decision: Neon Postgres (Production) + Docker Postgres (Dev)
+### Decision: Neon Postgres (Dev + Production)
 **Date:** MVP v1
-**Choice:** Neon for production, local Docker for development
+**Choice:** Neon for both development and production
 **Rationale:**
 - Neon: Serverless, no cold starts, native Vercel integration, generous free tier
-- Local Docker: Avoids burning Neon compute units during development
+- Single database provider across environments reduces setup drift
 - Alternative considered: Supabase, Railway, PlanetScale
 
 ### Decision: Pooled + Direct Connection Strings
