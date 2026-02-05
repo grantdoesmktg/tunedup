@@ -27,7 +27,9 @@ struct BuildDetailView: View {
                         // Header with vehicle info
                         BuildDetailHeader(
                             build: build,
-                            onBack: { dismiss() }
+                            isDeleting: isDeleting,
+                            onBack: { dismiss() },
+                            onDelete: { showingDeleteConfirm = true }
                         )
 
                         // Performance stats
@@ -110,7 +112,9 @@ struct BuildDetailView: View {
 
 struct BuildDetailHeader: View {
     let build: Build
+    let isDeleting: Bool
     let onBack: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -145,7 +149,7 @@ struct BuildDetailHeader: View {
                     // Delete button
                     Button(action: {
                         Haptics.impact(.light)
-                        showingDeleteConfirm = true
+                        onDelete()
                     }) {
                         Image(systemName: isDeleting ? "hourglass" : "trash")
                             .font(.system(size: 18))
