@@ -90,11 +90,11 @@ struct GarageView: View {
             .onReceive(NotificationCenter.default.publisher(for: .buildDeleted)) { _ in
                 Task { await viewModel.fetchBuilds() }
             }
-            .onChange(of: viewModel.builds) { _, newValue in
-                if newValue.isEmpty {
+            .onChange(of: viewModel.builds.count) { _, newCount in
+                if newCount == 0 {
                     selectedIndex = 0
                 } else {
-                    selectedIndex = min(selectedIndex, max(0, newValue.count - 1))
+                    selectedIndex = min(selectedIndex, max(0, newCount - 1))
                 }
             }
             .fullScreenCover(isPresented: $showingWizard) {
