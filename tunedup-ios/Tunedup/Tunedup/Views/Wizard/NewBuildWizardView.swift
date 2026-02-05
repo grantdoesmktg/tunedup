@@ -320,6 +320,16 @@ struct VehicleStepContent: View {
                     )
                 }
             }
+
+            // Swipe hint (only on first step)
+            HStack {
+                Spacer()
+                Text("Swipe to continue  →")
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textTertiary.opacity(0.6))
+                Spacer()
+            }
+            .padding(.top, TunedUpTheme.Spacing.sm)
         }
     }
 }
@@ -787,7 +797,7 @@ struct GeneratingOverlay: View {
     @State private var quipText: String = ""
     @State private var quipPool: [String] = []
     @State private var quipIndex: Int = 0
-    private let quipTimer = Timer.publish(every: 3.0, on: .main, in: .common).autoconnect()
+    private let quipTimer = Timer.publish(every: 6.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -856,10 +866,14 @@ struct GeneratingOverlay: View {
                     Text(quipText)
                         .font(TunedUpTheme.Typography.bodyBold)
                         .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, TunedUpTheme.Spacing.lg)
                         .padding(.vertical, TunedUpTheme.Spacing.sm)
                         .background(TunedUpTheme.Colors.darkSurface.opacity(0.6))
                         .cornerRadius(TunedUpTheme.Radius.medium)
+                        .frame(height: 56)
                         .transition(.opacity)
                 }
 
@@ -900,43 +914,57 @@ struct GeneratingOverlay: View {
             return [
                 "Alright, let's see what you're driving here...",
                 "Translating your input into shop-speak...",
-                "Okay, I know what you're working with."
+                "Okay, I know what you're working with.",
+                "Reading the VIN tea leaves...",
+                "If it runs, we can tune it."
             ]
         case .strategy:
             return [
                 "Budget math with greasy fingerprints.",
                 "Picking the lane: fast, safe, or both.",
-                "Plotting the stages so it doesn't fall apart."
+                "Plotting the stages so it doesn't fall apart.",
+                "Trying not to spend your rent money.",
+                "Building a plan that won't cook itself."
             ]
         case .synergy:
             return [
                 "Making mods play nice together.",
                 "Stacking gains, not problems.",
-                "No explosions detected."
+                "No explosions detected.",
+                "One mod at a time, no chaos.",
+                "Keeping the build civilized."
             ]
         case .execution:
             return [
                 "Deciding what you can wrench vs what you should pay for.",
                 "If a bolt snaps, I don't wanna hear about it.",
-                "Garage-friendly or shop-only? Let's see."
+                "Garage-friendly or shop-only? Let's see.",
+                "Some jobs are best left to a lift.",
+                "Wrench time vs wallet time."
             ]
         case .performance:
             return [
                 "Running the napkin math and the reality check.",
                 "Power estimates without the hype.",
-                "Putting numbers on the grin factor."
+                "Putting numbers on the grin factor.",
+                "Dyno dreams, spreadsheet reality.",
+                "Numbers that won't get you laughed out of the pits."
             ]
         case .sourcing:
             return [
                 "Hunting parts that won't explode in 3 months.",
                 "Brand roulette? Nah. We pick winners.",
-                "Building a parts list that doesn't suck."
+                "Building a parts list that doesn't suck.",
+                "Shopping smart so the build survives.",
+                "Filtering out the eBay specials."
             ]
         case .tone:
             return [
                 "Making sure you can actually understand this.",
                 "Whoops, I wrote that in ancient hieroglyphics.",
-                "Error, error, error... lol jk it's fine."
+                "Error, error, error... lol jk it's fine.",
+                "Trimming the fat, keeping the flavor.",
+                "Alright, let's make it readable."
             ]
         case .none:
             return []
