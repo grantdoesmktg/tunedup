@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   try {
     const session = await getSessionFromRequest(request);
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', code: 'unauthorized' }, { status: 401 });
     }
 
     const builds = await prisma.build.findMany({
@@ -100,7 +100,11 @@ export async function POST(request: Request) {
     });
     if (existingCount >= MAX_BUILDS) {
       return NextResponse.json(
-        { error: 'Maximum 3 builds allowed. Delete a build to create a new one.' },
+        {
+          error: 'Maximum 3 builds allowed. Delete a build to create a new one.',
+          code: 'build_limit_reached',
+          canCreateNew: false,
+        },
         { status: 400 }
       );
     }
@@ -109,7 +113,11 @@ export async function POST(request: Request) {
     const blocked = await checkUsageBlocked(session.userId);
     if (blocked) {
       return NextResponse.json(
-        { error: 'upgrade_required', message: "You've used all your tokens this month" },
+        {
+          error: 'upgrade_required',
+          code: 'usage_limit_reached',
+          message: "You've used all your tokens this month",
+        },
         { status: 403 }
       );
     }
@@ -141,6 +149,7 @@ export async function POST(request: Request) {
           };
 
           try {
+            console.info('[builds] start', { buildId: build.id, userId: session.userId });
             const result = await runBuildPipeline({
               buildId: build.id,
               userId: session.userId,
@@ -152,13 +161,16 @@ export async function POST(request: Request) {
             });
 
             send('complete', { buildId: build.id, success: true, totalTokens: result.totalTokens });
+            console.info('[builds] complete', { buildId: build.id, userId: session.userId, totalTokens: result.totalTokens });
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             send('error', {
               error: errorMessage,
               partial: true,
               buildId: build.id,
+              code: 'pipeline_failed',
             });
+            console.error('[builds] failed', { buildId: build.id, userId: session.userId, error: errorMessage });
           } finally {
             controller.close();
           }
@@ -175,6 +187,7 @@ export async function POST(request: Request) {
     } else {
       // Non-SSE: run pipeline and return result
       try {
+        console.info('[builds] start', { buildId: build.id, userId: session.userId });
         const result = await runBuildPipeline({
           buildId: build.id,
           userId: session.userId,
@@ -183,20 +196,23 @@ export async function POST(request: Request) {
           onProgress: () => {}, // No-op for non-SSE
         });
 
+        console.info('[builds] complete', { buildId: build.id, userId: session.userId, totalTokens: result.totalTokens });
         return NextResponse.json({ buildId: build.id, success: true, totalTokens: result.totalTokens });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[builds] failed', { buildId: build.id, userId: session.userId, error: errorMessage });
         return NextResponse.json(
-          { buildId: build.id, success: false, partial: true },
+          { buildId: build.id, success: false, partial: true, code: 'pipeline_failed' },
           { status: 200 }
         );
       }
     }
   } catch (error) {
     if (error instanceof ValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message, code: 'validation_error' }, { status: 400 });
     }
 
     console.error('Build create error:', error);
-    return NextResponse.json({ error: 'Failed to create build' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create build', code: 'server_error' }, { status: 500 });
   }
 }

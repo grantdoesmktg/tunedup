@@ -33,6 +33,11 @@ extension View {
         )
         .onPreferenceChange(SizePreferenceKey.self, perform: onChange)
     }
+
+    /// Dismiss keyboard
+    func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 }
 
 private struct SizePreferenceKey: PreferenceKey {

@@ -143,20 +143,39 @@ struct GlowOrbBackground: View {
 // MARK: - Noise Texture Overlay
 
 struct NoiseOverlay: View {
+    @State private var noisePoints: [(CGPoint, Double)] = []
+
     var body: some View {
         Canvas { context, size in
-            for _ in 0..<1000 {
-                let x = CGFloat.random(in: 0...size.width)
-                let y = CGFloat.random(in: 0...size.height)
-                let opacity = Double.random(in: 0.02...0.05)
+            // Use pre-generated noise points for better performance
+            if noisePoints.isEmpty {
+                // Generate on first render only
+                return
+            }
 
+            for (point, opacity) in noisePoints {
+                let scaledPoint = CGPoint(
+                    x: point.x * size.width,
+                    y: point.y * size.height
+                )
                 context.fill(
-                    Path(ellipseIn: CGRect(x: x, y: y, width: 1, height: 1)),
+                    Path(ellipseIn: CGRect(x: scaledPoint.x, y: scaledPoint.y, width: 1, height: 1)),
                     with: .color(Color.white.opacity(opacity))
                 )
             }
         }
         .allowsHitTesting(false)
+        .onAppear {
+            // Generate normalized noise points once
+            if noisePoints.isEmpty {
+                noisePoints = (0..<800).map { _ in
+                    (
+                        CGPoint(x: CGFloat.random(in: 0...1), y: CGFloat.random(in: 0...1)),
+                        Double.random(in: 0.02...0.05)
+                    )
+                }
+            }
+        }
     }
 }
 

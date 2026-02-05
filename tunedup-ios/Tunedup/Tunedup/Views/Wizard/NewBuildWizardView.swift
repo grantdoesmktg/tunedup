@@ -11,9 +11,38 @@ struct NewBuildWizardView: View {
 
     var body: some View {
         ZStack {
-            // Background
+            // Background with atmospheric depth
             TunedUpTheme.Colors.pureBlack
                 .ignoresSafeArea()
+
+            // Gradient depth layer
+            LinearGradient(
+                colors: [
+                    TunedUpTheme.Colors.darkSurface.opacity(0.5),
+                    TunedUpTheme.Colors.pureBlack,
+                    TunedUpTheme.Colors.darkSurface.opacity(0.3)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            // Glow orbs for atmosphere
+            GlowOrbBackground(
+                color: TunedUpTheme.Colors.cyan,
+                size: 300,
+                position: CGPoint(x: 100, y: 150)
+            )
+
+            GlowOrbBackground(
+                color: TunedUpTheme.Colors.magenta,
+                size: 250,
+                position: CGPoint(x: 300, y: 600)
+            )
+
+            // Subtle noise texture
+            NoiseOverlay()
+                .opacity(0.4)
 
             SpeedLinesBackground(lineCount: 4)
 
@@ -41,22 +70,32 @@ struct NewBuildWizardView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(TunedUpTheme.Animation.spring, value: viewModel.currentStep)
+                .gesture(
+                    DragGesture()
+                        .onEnded { _ in
+                            // Dismiss keyboard on swipe
+                            dismissKeyboard()
+                        }
+                )
 
-                // Bottom buttons
-                WizardBottomButtons(
-                    currentStep: viewModel.currentStep,
-                    canProceed: viewModel.canProceed,
-                    isGenerating: viewModel.isGenerating,
-                    onBack: { viewModel.goBack() },
-                    onNext: { viewModel.goNext() },
-                    onGenerate: {
-                        Task {
-                            if let buildId = await viewModel.generateBuild() {
-                                onComplete(buildId)
+                // Generate Build button (only shown on last step)
+                if viewModel.currentStep == .location {
+                    WizardGenerateButton(
+                        canProceed: viewModel.canProceed,
+                        isGenerating: viewModel.isGenerating,
+                        pipelineStep: viewModel.pipelineStep,
+                        onGenerate: {
+                            // Dismiss keyboard
+                            dismissKeyboard()
+
+                            Task {
+                                if let buildId = await viewModel.generateBuild() {
+                                    onComplete(buildId)
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
 
             // Generating overlay
@@ -210,7 +249,15 @@ struct WizardStepContent: View {
             }
             .padding(.horizontal, TunedUpTheme.Spacing.lg)
             .padding(.top, TunedUpTheme.Spacing.lg)
-            .padding(.bottom, 120) // Space for bottom buttons
+            .padding(.bottom, step == .location ? 140 : 40) // Extra space for Generate button
+        }
+        .onTapGesture {
+            // Dismiss keyboard on tap
+            dismissKeyboard()
+        }
+        .onChange(of: viewModel.currentStep) { _, _ in
+            // Dismiss keyboard when changing steps
+            dismissKeyboard()
         }
     }
 }
@@ -493,6 +540,27 @@ struct PreferencesStepContent: View {
                 icon: "leaf.fill",
                 isOn: $viewModel.emissionsSensitive
             )
+
+            PreferenceToggle(
+                label: "Track Car",
+                description: "Built for track days and racing",
+                icon: "flag.checkered",
+                isOn: $viewModel.trackCar
+            )
+
+            PreferenceToggle(
+                label: "Drift Build",
+                description: "Optimized for drifting and sliding",
+                icon: "tornado",
+                isOn: $viewModel.driftBuild
+            )
+
+            PreferenceToggle(
+                label: "Off Road",
+                description: "Built for off-road adventures",
+                icon: "mountain.2.fill",
+                isOn: $viewModel.offRoad
+            )
         }
     }
 }
@@ -634,79 +702,79 @@ struct WizardTextField: View {
     }
 }
 
-// MARK: - Bottom Buttons
+// MARK: - Generate Build Button with Loading State
 
-struct WizardBottomButtons: View {
-    let currentStep: WizardStep
+struct WizardGenerateButton: View {
     let canProceed: Bool
     let isGenerating: Bool
-    let onBack: () -> Void
-    let onNext: () -> Void
+    let pipelineStep: PipelineStep?
     let onGenerate: () -> Void
-
-    private var isFirstStep: Bool {
-        currentStep == WizardStep.allCases.first
-    }
-
-    private var isLastStep: Bool {
-        currentStep == WizardStep.allCases.last
-    }
 
     var body: some View {
         VStack(spacing: 0) {
             Divider()
                 .background(TunedUpTheme.Colors.textTertiary.opacity(0.2))
 
-            HStack(spacing: TunedUpTheme.Spacing.md) {
-                // Back button
-                if !isFirstStep {
-                    Button(action: {
-                        Haptics.impact(.light)
-                        onBack()
-                    }) {
-                        HStack {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
+            VStack(spacing: TunedUpTheme.Spacing.md) {
+                // Status text while generating
+                if isGenerating, let step = pipelineStep {
+                    HStack(spacing: TunedUpTheme.Spacing.sm) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: TunedUpTheme.Colors.cyan))
+                            .scaleEffect(0.8)
+
+                        Text(step.loadingMessage)
+                            .font(TunedUpTheme.Typography.callout)
+                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
                     }
-                    .buttonStyle(GhostButtonStyle())
+                    .padding(.top, TunedUpTheme.Spacing.sm)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
-                Spacer()
-
-                // Next/Generate button
-                if isLastStep {
-                    Button(action: {
-                        Haptics.impact(.medium)
-                        onGenerate()
-                    }) {
-                        HStack {
+                // Generate button
+                Button(action: {
+                    Haptics.impact(.medium)
+                    onGenerate()
+                }) {
+                    HStack(spacing: TunedUpTheme.Spacing.sm) {
+                        if isGenerating {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: TunedUpTheme.Colors.pureBlack))
+                                .scaleEffect(0.9)
+                        } else {
                             Image(systemName: "sparkles")
-                            Text("Generate Build")
                         }
+
+                        Text(isGenerating ? "Generating..." : "Generate Build")
                     }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .frame(width: 200)
-                    .disabled(!canProceed || isGenerating)
-                } else {
-                    Button(action: {
-                        Haptics.impact(.light)
-                        onNext()
-                    }) {
-                        HStack {
-                            Text("Next")
-                            Image(systemName: "chevron.right")
-                        }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .frame(width: 120)
-                    .disabled(!canProceed)
                 }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!canProceed || isGenerating)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, TunedUpTheme.Spacing.lg)
+                .animation(TunedUpTheme.Animation.spring, value: isGenerating)
             }
-            .padding(.horizontal, TunedUpTheme.Spacing.lg)
             .padding(.vertical, TunedUpTheme.Spacing.md)
-            .background(TunedUpTheme.Colors.pureBlack)
+            .background(
+                TunedUpTheme.Colors.pureBlack
+                    .overlay(
+                        // Subtle glow when generating
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        TunedUpTheme.Colors.cyan.opacity(isGenerating ? 0.1 : 0),
+                                        TunedUpTheme.Colors.pureBlack
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .allowsHitTesting(false)
+                    )
+            )
         }
+        .animation(TunedUpTheme.Animation.spring, value: isGenerating)
     }
 }
 
@@ -718,8 +786,42 @@ struct GeneratingOverlay: View {
 
     var body: some View {
         ZStack {
-            TunedUpTheme.Colors.pureBlack.opacity(0.95)
+            // Atmospheric background
+            TunedUpTheme.Colors.pureBlack
                 .ignoresSafeArea()
+
+            // Depth gradient
+            LinearGradient(
+                colors: [
+                    TunedUpTheme.Colors.darkSurface.opacity(0.8),
+                    TunedUpTheme.Colors.pureBlack,
+                    TunedUpTheme.Colors.darkSurface.opacity(0.6)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            // Atmospheric glow orbs
+            GlowOrbBackground(
+                color: TunedUpTheme.Colors.cyan,
+                size: 400,
+                position: CGPoint(x: 200, y: 250)
+            )
+
+            GlowOrbBackground(
+                color: TunedUpTheme.Colors.magenta,
+                size: 350,
+                position: CGPoint(x: 250, y: 650)
+            )
+
+            // Subtle noise
+            NoiseOverlay()
+                .opacity(0.3)
+
+            // Speed lines for energy
+            SpeedLinesBackground(lineCount: 6, isAnimating: true)
+                .opacity(0.6)
 
             VStack(spacing: TunedUpTheme.Spacing.xxl) {
                 // Animated logo/icon

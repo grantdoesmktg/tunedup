@@ -51,6 +51,16 @@ enum TunedUpTheme {
             startPoint: .leading,
             endPoint: .trailing
         )
+
+        static let atmosphericGradient = LinearGradient(
+            colors: [
+                darkSurface.opacity(0.5),
+                pureBlack,
+                darkSurface.opacity(0.3)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     // MARK: - Typography
@@ -151,6 +161,42 @@ extension Color {
 
 // MARK: - View Modifiers
 
+struct AtmosphericBackgroundModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        ZStack {
+            // Base black
+            TunedUpTheme.Colors.pureBlack
+                .ignoresSafeArea()
+
+            // Atmospheric gradient
+            TunedUpTheme.Colors.atmosphericGradient
+                .ignoresSafeArea()
+
+            // Glow orbs
+            GeometryReader { geometry in
+                GlowOrbBackground(
+                    color: TunedUpTheme.Colors.cyan,
+                    size: 300,
+                    position: CGPoint(x: geometry.size.width * 0.3, y: geometry.size.height * 0.2)
+                )
+
+                GlowOrbBackground(
+                    color: TunedUpTheme.Colors.magenta,
+                    size: 250,
+                    position: CGPoint(x: geometry.size.width * 0.7, y: geometry.size.height * 0.7)
+                )
+            }
+
+            // Noise texture
+            NoiseOverlay()
+                .opacity(0.4)
+
+            // Content
+            content
+        }
+    }
+}
+
 struct GlowEffect: ViewModifier {
     let color: Color
     let radius: CGFloat
@@ -229,6 +275,10 @@ struct GhostButtonStyle: ButtonStyle {
 // MARK: - View Extensions
 
 extension View {
+    func atmosphericBackground() -> some View {
+        modifier(AtmosphericBackgroundModifier())
+    }
+
     func glow(color: Color = TunedUpTheme.Colors.cyan, radius: CGFloat = 20) -> some View {
         modifier(GlowEffect(color: color, radius: radius))
     }

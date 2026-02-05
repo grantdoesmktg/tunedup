@@ -5,10 +5,10 @@
 ## Overall Status: ✅ Scaffold Complete
 
 The foundational code for both backend and iOS has been scaffolded. Next steps are to:
-1. Create the Xcode project and add the Swift files
-2. Run `npm install` and `pnpm db:push` in the backend
-3. Configure environment variables
-4. Test the full flow
+1. Finalize iOS wiring (URL scheme + first screen + device networking)
+2. Test end-to-end auth flow on device
+3. Verify Resend domain and email delivery
+4. Monitor production build costs
 
 ---
 
@@ -23,6 +23,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 | Prisma schema | ✅ Done | User, Session, MagicLink, Build, Usage, Chat models |
 | Prisma singleton client | ✅ Done | Prevents connection pool exhaustion |
 | Environment setup (.env.example) | ✅ Done | All variables documented |
+| Vercel deployment | ✅ Done | Build live; backend deployed |
 
 ### Auth System
 | Task | Status | Notes |
@@ -30,7 +31,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 | Auth utilities (lib/auth.ts) | ✅ Done | Magic link, sessions, PIN hashing |
 | POST /api/auth/request-link | ✅ Done | Resend email integration |
 | POST /api/auth/verify | ✅ Done | Token exchange + user creation |
-| POST /api/pin/set | ✅ Done | bcrypt hashing |
+| POST /api/pin/set | ✅ Done | bcryptjs hashing (serverless-safe) |
 | POST /api/pin/verify | ✅ Done | Session-authenticated |
 
 ### Build System
@@ -76,12 +77,13 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 ### Infrastructure
 | Task | Status | Notes |
 |------|--------|-------|
-| Xcode project setup | ⏳ Pending | Needs manual creation |
+| Xcode project setup | ✅ Done | Project created; files restored and re-added |
 | Folder structure | ✅ Done | Models, Views, ViewModels, Services, Utilities |
 | Theme/styling | ✅ Done | Dark theme, colors, fonts, modifiers |
 | API client | ✅ Done | Full REST client with auth |
 | SSE client | ✅ Done | URLSessionDataDelegate implementation |
 | Keychain service | ✅ Done | Secure token storage |
+| Device networking | 🚧 In Progress | Must use Mac LAN IP + enable Local Network permission |
 
 ### Screens
 | Task | Status | Notes |
@@ -142,12 +144,14 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 | Token usage tracking | ✅ Tested | Usage increments correctly (32,558 tokens per build) |
 | Graceful degradation | ✅ Tested | Step D can fail, pipeline continues |
 | Build limit enforcement | ✅ Tested | 4th build rejected as expected |
+| SSE token logging | ✅ Tested | Per-step token totals emitted in SSE |
 
 ### 🐛 Bugs Fixed During Testing
 1. **bcrypt native module** - Required `npm rebuild bcrypt` after installation
 2. **Local Postgres conflict** - Had to stop local Postgres to use Docker on port 5432
 3. **Gemini model names** - Changed from `gemini-2.5-pro-preview-05-06` → `gemini-2.5-pro`
 4. **Step G null check** - Fixed `stepE.caveats.join()` error when stepE is null
+5. **Vercel build failure** - Switched to `bcryptjs` to avoid native module build errors
 
 ### 💰 Performance & Cost Analysis
 - **Build time:** ~60+ seconds (user patience concern)
@@ -175,7 +179,7 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 - ✅ `src/services/build-pipeline/step-f-sourcing.ts` - Now uses Flash model
 - ✅ `src/services/build-pipeline/step-g-tone.ts` - Now uses Flash model
 
-**Next test:** Generate a new build to verify speed/cost improvement
+**Next test:** Capture input/output token split for precise cost accounting
 
 #### **Phase 2: Parallel Processing (Medium Effort)**
 **Status:** ⏳ Future optimization
@@ -188,11 +192,11 @@ The foundational code for both backend and iOS has been scaffolded. Next steps a
 ## Next Steps
 
 ### Immediate
-1. **Create Xcode project** - Add all Swift files to a new iOS project
-2. **Configure URL scheme** - `tunedup://` for magic link deep links
-3. **Run backend locally** - `pnpm install && pnpm docker:up && pnpm db:push && pnpm dev`
-4. **Test auth flow** - Request magic link, verify, set PIN
-5. **RECOMMENDED: Implement Phase 1 optimization** - Switch to Flash for faster/cheaper builds
+1. **Configure URL scheme** - `tunedup://` for magic link deep links
+2. **Set app entry view** - Ensure `TunedupApp.swift` points to desired first screen
+3. **Device networking** - Use Mac LAN IP in `APIClient.swift` + enable Local Network permission
+4. **Test auth flow** - Request magic link, verify, set PIN on device
+5. **Verify Resend domain** - Add DNS records in Vercel Domains
 
 ### Before Launch
 1. Set up Neon database

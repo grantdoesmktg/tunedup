@@ -25,6 +25,9 @@ class WizardViewModel: ObservableObject {
     // MARK: - Preferences
     @Published var dailyDriver: Bool = true
     @Published var emissionsSensitive: Bool = false
+    @Published var trackCar: Bool = false
+    @Published var driftBuild: Bool = false
+    @Published var offRoad: Bool = false
 
     // MARK: - Existing mods
     @Published var existingMods: String = ""

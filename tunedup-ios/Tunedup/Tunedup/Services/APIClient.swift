@@ -6,11 +6,7 @@ import Foundation
 class APIClient {
     static let shared = APIClient()
 
-    #if DEBUG
-    private let baseURL = "http://192.168.1.4:3000"
-    #else
-    private let baseURL = "https://api.tunedup.dev"
-    #endif
+    private let baseURL = "https://www.tunedup.dev"
 
     private let session: URLSession
     private let decoder: JSONDecoder
