@@ -208,7 +208,7 @@ struct BuildCarousel: View {
                         radius: selectedIndex.wrappedValue == index ? 22 : 10,
                         y: selectedIndex.wrappedValue == index ? 12 : 6
                     )
-                    .zIndex(1 - abs(diff))
+                    .zIndex(1.0 - Double(abs(diff)))
                 }
 
                 // New build card
@@ -234,7 +234,7 @@ struct BuildCarousel: View {
                     radius: selectedIndex.wrappedValue == addIndex ? 22 : 10,
                     y: selectedIndex.wrappedValue == addIndex ? 12 : 6
                 )
-                .zIndex(1 - abs(addDiff))
+                .zIndex(1.0 - Double(abs(addDiff)))
             }
             .padding(.horizontal, (geometry.size.width - cardWidth) / 2)
             .offset(x: -CGFloat(selectedIndex.wrappedValue) * (cardWidth + cardSpacing) + dragOffset)

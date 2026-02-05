@@ -8,82 +8,79 @@ struct BuildCard: View {
     let isSelected: Bool
     var onTap: () -> Void
 
-    @State private var isPressed = false
-
     var body: some View {
-        Button(action: {
-            Haptics.impact(.medium)
-            onTap()
-        }) {
-            ZStack {
-                // Card Background
-                RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
-                    .fill(TunedUpTheme.Colors.cardSurface)
+        ZStack {
+            // Card Background
+            RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
+                .fill(TunedUpTheme.Colors.cardSurface)
 
-                // Gradient border when selected
-                if isSelected {
-                    RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
-                        .stroke(TunedUpTheme.Colors.brandGradient, lineWidth: 2)
+            // Gradient border when selected
+            if isSelected {
+                RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
+                    .stroke(TunedUpTheme.Colors.brandGradient, lineWidth: 2)
+            }
+
+            // Content
+            VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.md) {
+                // Status indicator
+                HStack {
+                    StatusBadge(status: build.pipelineStatus)
+                    Spacer()
+                    Text(formatDate(build.createdAt))
+                        .font(TunedUpTheme.Typography.caption)
+                        .foregroundColor(TunedUpTheme.Colors.textTertiary)
                 }
 
-                // Content
-                VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.md) {
-                    // Status indicator
-                    HStack {
-                        StatusBadge(status: build.pipelineStatus)
-                        Spacer()
-                        Text(formatDate(build.createdAt))
-                            .font(TunedUpTheme.Typography.caption)
-                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
-                    }
+                Spacer()
 
-                    Spacer()
+                // Vehicle name
+                VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
+                    Text(build.vehicle.displayName)
+                        .font(TunedUpTheme.Typography.title2)
+                        .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                        .lineLimit(1)
 
-                    // Vehicle name
-                    VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
-                        Text(build.vehicle.displayName)
-                            .font(TunedUpTheme.Typography.title2)
-                            .foregroundColor(TunedUpTheme.Colors.textPrimary)
-                            .lineLimit(1)
+                    Text(build.vehicle.trim)
+                        .font(TunedUpTheme.Typography.subheadline)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                        .lineLimit(1)
+                }
 
-                        Text(build.vehicle.trim)
-                            .font(TunedUpTheme.Typography.subheadline)
-                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
-                            .lineLimit(1)
-                    }
-
-                    // Stats preview
-                    if let stats = build.statsPreview {
-                        HStack(spacing: TunedUpTheme.Spacing.lg) {
-                            if let hpRange = stats.hpGainRange, hpRange.count == 2 {
-                                StatPill(
-                                    label: "HP GAIN",
-                                    value: "+\(hpRange[0])-\(hpRange[1])",
-                                    color: TunedUpTheme.Colors.cyan
-                                )
-                            }
+                // Stats preview
+                if let stats = build.statsPreview {
+                    HStack(spacing: TunedUpTheme.Spacing.lg) {
+                        if let hpRange = stats.hpGainRange, hpRange.count == 2 {
                             StatPill(
-                                label: "BUDGET",
-                                value: "$\(stats.totalBudget.formattedWithCommas)",
-                                color: TunedUpTheme.Colors.magenta
+                                label: "HP GAIN",
+                                value: "+\(hpRange[0])-\(hpRange[1])",
+                                color: TunedUpTheme.Colors.cyan
                             )
                         }
-                    }
-
-                    // Summary text
-                    if let summary = build.summary {
-                        Text(summary)
-                            .font(TunedUpTheme.Typography.footnote)
-                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
-                            .lineLimit(2)
-                            .padding(.top, TunedUpTheme.Spacing.xs)
+                        StatPill(
+                            label: "BUDGET",
+                            value: "$\(stats.totalBudget.formattedWithCommas)",
+                            color: TunedUpTheme.Colors.magenta
+                        )
                     }
                 }
-                .padding(TunedUpTheme.Spacing.lg)
+
+                // Summary text
+                if let summary = build.summary {
+                    Text(summary)
+                        .font(TunedUpTheme.Typography.footnote)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                        .lineLimit(2)
+                        .padding(.top, TunedUpTheme.Spacing.xs)
+                }
             }
-            .frame(height: 220)
+            .padding(TunedUpTheme.Spacing.lg)
         }
-        .buttonStyle(CardButtonStyle())
+        .frame(height: 220)
+        .contentShape(RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl))
+        .onTapGesture {
+            Haptics.impact(.medium)
+            onTap()
+        }
         .rotation3DEffect(
             .degrees(isSelected ? 0 : -2),
             axis: (x: 0, y: 1, z: 0),
@@ -194,52 +191,53 @@ struct EmptyBuildCard: View {
     var onTap: () -> Void
 
     var body: some View {
-        Button(action: {
-            Haptics.impact(.light)
-            onTap()
-        }) {
-            ZStack {
-                RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                TunedUpTheme.Colors.darkSurface,
-                                TunedUpTheme.Colors.cardSurface
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        ZStack {
+            RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            TunedUpTheme.Colors.darkSurface,
+                            TunedUpTheme.Colors.cardSurface
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
+                        .strokeBorder(
+                            style: StrokeStyle(lineWidth: 2, dash: [10, 8])
                         )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl)
-                            .strokeBorder(
-                                style: StrokeStyle(lineWidth: 2, dash: [10, 8])
-                            )
-                            .foregroundColor(
-                                isEnabled
-                                    ? TunedUpTheme.Colors.textTertiary.opacity(0.7)
-                                    : TunedUpTheme.Colors.textTertiary.opacity(0.3)
-                            )
-                    )
+                        .foregroundColor(
+                            isEnabled
+                                ? TunedUpTheme.Colors.textTertiary.opacity(0.7)
+                                : TunedUpTheme.Colors.textTertiary.opacity(0.3)
+                        )
+                )
 
-                VStack(spacing: TunedUpTheme.Spacing.md) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 54, weight: .bold))
-                        .foregroundColor(isEnabled ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.textTertiary.opacity(0.6))
+            VStack(spacing: TunedUpTheme.Spacing.md) {
+                Image(systemName: "plus")
+                    .font(.system(size: 54, weight: .bold))
+                    .foregroundColor(isEnabled ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.textTertiary.opacity(0.6))
 
-                    Text(isEnabled ? "Create New Build" : "Build Limit Reached")
-                        .font(TunedUpTheme.Typography.title3)
-                        .foregroundColor(isEnabled ? TunedUpTheme.Colors.textPrimary : TunedUpTheme.Colors.textSecondary)
+                Text(isEnabled ? "Create New Build" : "Build Limit Reached")
+                    .font(TunedUpTheme.Typography.title3)
+                    .foregroundColor(isEnabled ? TunedUpTheme.Colors.textPrimary : TunedUpTheme.Colors.textSecondary)
 
-                    Text(isEnabled ? "Swipe to add another build" : "Delete a build to add another")
-                        .font(TunedUpTheme.Typography.footnote)
-                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
-                }
+                Text(isEnabled ? "Swipe to add another build" : "Delete a build to add another")
+                    .font(TunedUpTheme.Typography.footnote)
+                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
             }
-            .frame(height: 220)
+        }
+        .frame(height: 220)
+        .contentShape(RoundedRectangle(cornerRadius: TunedUpTheme.Radius.xl))
+        .onTapGesture {
+            if isEnabled {
+                Haptics.impact(.light)
+                onTap()
+            }
         }
         .disabled(!isEnabled)
-        .buttonStyle(CardButtonStyle())
     }
 }
 
