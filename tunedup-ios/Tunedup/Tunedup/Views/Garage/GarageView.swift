@@ -172,16 +172,20 @@ struct BuildCarousel: View {
 
     @GestureState private var dragOffset: CGFloat = 0
 
-    private let cardWidth: CGFloat = UIScreen.main.bounds.width - 80
-    private let cardSpacing: CGFloat = 16
-
     var body: some View {
         GeometryReader { geometry in
+            let cardWidth = geometry.size.width * 0.72
+            let cardSpacing: CGFloat = -36
             let totalItems = builds.count + 1
+            let totalWidth = cardWidth + cardSpacing
+            let currentIndex = CGFloat(selectedIndex.wrappedValue) - (dragOffset / totalWidth)
 
             HStack(spacing: cardSpacing) {
                 // Existing builds
                 ForEach(Array(builds.enumerated()), id: \.element.id) { index, build in
+                    let diff = CGFloat(index) - currentIndex
+                    let scale = max(0.82, 1 - abs(diff) * 0.18)
+                    let yOffset = abs(diff) * 16
                     BuildCard(
                         build: build,
                         isSelected: selectedIndex.wrappedValue == index,
@@ -196,33 +200,41 @@ struct BuildCarousel: View {
                         }
                     )
                     .frame(width: cardWidth)
-                    .rotation3DEffect(
-                        rotationAngle(for: index, selected: selectedIndex.wrappedValue),
-                        axis: (x: 0, y: 1, z: 0),
-                        perspective: 0.5
-                    )
-                    .scaleEffect(scaleEffect(for: index, selected: selectedIndex.wrappedValue))
+                    .scaleEffect(scale)
+                    .offset(y: yOffset)
                     .opacity(opacityEffect(for: index, selected: selectedIndex.wrappedValue))
+                    .shadow(
+                        color: TunedUpTheme.Colors.pureBlack.opacity(0.5),
+                        radius: selectedIndex.wrappedValue == index ? 22 : 10,
+                        y: selectedIndex.wrappedValue == index ? 12 : 6
+                    )
+                    .zIndex(1 - abs(diff))
                 }
 
                 // New build card
+                let addIndex = builds.count
+                let addDiff = CGFloat(addIndex) - currentIndex
+                let addScale = max(0.82, 1 - abs(addDiff) * 0.18)
+                let addYOffset = abs(addDiff) * 16
                 EmptyBuildCard(isEnabled: canCreateNew, onTap: {
-                    if selectedIndex.wrappedValue == builds.count {
+                    if selectedIndex.wrappedValue == addIndex {
                         onNewBuildTap()
                     } else {
                         withAnimation(TunedUpTheme.Animation.spring) {
-                            selectedIndex.wrappedValue = builds.count
+                            selectedIndex.wrappedValue = addIndex
                         }
                     }
                 })
-                    .frame(width: cardWidth)
-                    .rotation3DEffect(
-                        rotationAngle(for: builds.count, selected: selectedIndex.wrappedValue),
-                        axis: (x: 0, y: 1, z: 0),
-                        perspective: 0.5
-                    )
-                    .scaleEffect(scaleEffect(for: builds.count, selected: selectedIndex.wrappedValue))
-                    .opacity(opacityEffect(for: builds.count, selected: selectedIndex.wrappedValue))
+                .frame(width: cardWidth)
+                .scaleEffect(addScale)
+                .offset(y: addYOffset)
+                .opacity(opacityEffect(for: addIndex, selected: selectedIndex.wrappedValue))
+                .shadow(
+                    color: TunedUpTheme.Colors.pureBlack.opacity(0.5),
+                    radius: selectedIndex.wrappedValue == addIndex ? 22 : 10,
+                    y: selectedIndex.wrappedValue == addIndex ? 12 : 6
+                )
+                .zIndex(1 - abs(addDiff))
             }
             .padding(.horizontal, (geometry.size.width - cardWidth) / 2)
             .offset(x: -CGFloat(selectedIndex.wrappedValue) * (cardWidth + cardSpacing) + dragOffset)
@@ -249,25 +261,13 @@ struct BuildCarousel: View {
             )
             .animation(TunedUpTheme.Animation.spring, value: dragOffset)
         }
-        .frame(height: 260)
-    }
-
-    private func rotationAngle(for index: Int, selected: Int) -> Angle {
-        let diff = index - selected
-        if diff == 0 { return .degrees(0) }
-        return .degrees(Double(diff) * -8)
-    }
-
-    private func scaleEffect(for index: Int, selected: Int) -> CGFloat {
-        let diff = abs(index - selected)
-        if diff == 0 { return 1.0 }
-        return max(0.85, 1.0 - CGFloat(diff) * 0.1)
+        .frame(height: 320)
     }
 
     private func opacityEffect(for index: Int, selected: Int) -> Double {
         let diff = abs(index - selected)
         if diff == 0 { return 1.0 }
-        return max(0.5, 1.0 - Double(diff) * 0.3)
+        return max(0.4, 1.0 - Double(diff) * 0.35)
     }
 }
 

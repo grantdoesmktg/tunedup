@@ -222,41 +222,19 @@ struct EmptyBuildCard: View {
                             )
                     )
 
-                HStack(spacing: TunedUpTheme.Spacing.md) {
-                    VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
-                        Text(isEnabled ? "Create New Build" : "Build Limit Reached")
-                            .font(TunedUpTheme.Typography.title3)
-                            .foregroundColor(isEnabled ? TunedUpTheme.Colors.textPrimary : TunedUpTheme.Colors.textSecondary)
+                VStack(spacing: TunedUpTheme.Spacing.md) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 54, weight: .bold))
+                        .foregroundColor(isEnabled ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.textTertiary.opacity(0.6))
 
-                        Text(isEnabled ? "Swipe to add another build" : "Delete a build to add another")
-                            .font(TunedUpTheme.Typography.footnote)
-                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
-                    }
+                    Text(isEnabled ? "Create New Build" : "Build Limit Reached")
+                        .font(TunedUpTheme.Typography.title3)
+                        .foregroundColor(isEnabled ? TunedUpTheme.Colors.textPrimary : TunedUpTheme.Colors.textSecondary)
 
-                    Spacer()
+                    Text(isEnabled ? "Swipe to add another build" : "Delete a build to add another")
+                        .font(TunedUpTheme.Typography.footnote)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
                 }
-                .padding(.horizontal, TunedUpTheme.Spacing.lg)
-
-                // Side plus button (Forza-style tab)
-                HStack {
-                    Spacer()
-                    ZStack {
-                        Circle()
-                            .fill(isEnabled ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.textTertiary.opacity(0.4))
-                            .frame(width: 56, height: 56)
-                            .shadow(
-                                color: isEnabled ? TunedUpTheme.Colors.cyan.opacity(0.4) : Color.clear,
-                                radius: 12,
-                                y: 6
-                            )
-
-                        Image(systemName: "plus")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(isEnabled ? TunedUpTheme.Colors.pureBlack : TunedUpTheme.Colors.textSecondary)
-                    }
-                    .offset(x: 24)
-                }
-                .padding(.horizontal, TunedUpTheme.Spacing.lg)
             }
             .frame(height: 220)
         }
