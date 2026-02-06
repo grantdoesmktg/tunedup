@@ -121,19 +121,7 @@ struct BuildDetailHeader: View {
     let onDelete: () -> Void
 
     var body: some View {
-        ZStack(alignment: .top) {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    TunedUpTheme.Colors.cyan.opacity(0.15),
-                    TunedUpTheme.Colors.pureBlack
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 200)
-
-            VStack(spacing: TunedUpTheme.Spacing.lg) {
+        VStack(spacing: TunedUpTheme.Spacing.lg) {
                 // Nav bar
                 HStack {
                     Button(action: {
@@ -184,7 +172,6 @@ struct BuildDetailHeader: View {
                             .padding(.vertical, TunedUpTheme.Spacing.xs)
                             .background(TunedUpTheme.Colors.cyan.opacity(0.15))
                             .cornerRadius(TunedUpTheme.Radius.small)
-                    }
                 }
             }
         }
