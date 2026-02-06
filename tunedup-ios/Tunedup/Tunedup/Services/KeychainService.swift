@@ -13,6 +13,7 @@ class KeychainService {
         static let sessionToken = "session_token"
         static let userEmail = "user_email"
         static let userId = "user_id"
+        static let lastPinVerifiedAt = "pin_verified_at"
     }
 
     private init() {}
@@ -59,6 +60,22 @@ class KeychainService {
     func clearAll() {
         deleteSessionToken()
         deleteUserInfo()
+        delete(key: Keys.lastPinVerifiedAt)
+    }
+
+    // MARK: - PIN Verification Timestamp
+
+    func saveLastPinVerified(at date: Date) {
+        let formatter = ISO8601DateFormatter()
+        let value = formatter.string(from: date)
+        save(key: Keys.lastPinVerifiedAt, data: value.data(using: .utf8)!)
+    }
+
+    func getLastPinVerifiedAt() -> Date? {
+        guard let data = load(key: Keys.lastPinVerifiedAt),
+              let value = String(data: data, encoding: .utf8) else { return nil }
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: value)
     }
 
     // MARK: - Keychain Operations

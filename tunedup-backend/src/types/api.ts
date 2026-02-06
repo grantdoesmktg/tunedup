@@ -36,6 +36,7 @@ export interface PinVerifyRequest {
 
 export interface PinVerifyResponse {
   verified: boolean;
+  sessionToken?: string | null;
 }
 
 // Builds

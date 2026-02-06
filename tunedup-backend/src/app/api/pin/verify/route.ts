@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSessionFromRequest, verifyUserPin, AuthError } from '@/lib/auth';
+import { getSessionFromRequest, verifyUserPin, createSession, AuthError } from '@/lib/auth';
 import { validateRequest, pinVerifySchema, ValidationError } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -7,19 +7,25 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const session = await getSessionFromRequest(request);
-    if (!session) {
+    const body = await request.json();
+    const { pin, userId } = validateRequest(pinVerifySchema, body);
+
+    const resolvedUserId = session?.userId || userId;
+    if (!resolvedUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { pin } = validateRequest(pinVerifySchema, body);
-
-    const verified = await verifyUserPin(session.userId, pin);
+    const verified = await verifyUserPin(resolvedUserId, pin);
     if (!verified) {
       return NextResponse.json({ error: 'Incorrect PIN' }, { status: 401 });
     }
 
-    return NextResponse.json({ verified: true });
+    let sessionToken: string | null = null;
+    if (!session) {
+      sessionToken = await createSession(resolvedUserId);
+    }
+
+    return NextResponse.json({ verified: true, sessionToken });
   } catch (error) {
     if (error instanceof ValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

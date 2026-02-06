@@ -57,8 +57,10 @@ class APIClient {
     }
 
     func verifyPin(_ pin: String) async throws -> PinVerifyResponse {
-        let request = PinVerifyRequest(pin: pin)
-        return try await post("/api/pin/verify", body: request, authenticated: true)
+        let userId = KeychainService.shared.getUserId()
+        let request = PinVerifyRequest(pin: pin, userId: userId)
+        let isAuthenticated = KeychainService.shared.getSessionToken() != nil
+        return try await post("/api/pin/verify", body: request, authenticated: isAuthenticated)
     }
 
     // MARK: - Build Endpoints

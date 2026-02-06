@@ -45,10 +45,12 @@ struct PinSetResponse: Codable {
 
 struct PinVerifyRequest: Codable {
     let pin: String
+    let userId: String?
 }
 
 struct PinVerifyResponse: Codable {
     let verified: Bool
+    let sessionToken: String?
 }
 
 // MARK: - Usage Model

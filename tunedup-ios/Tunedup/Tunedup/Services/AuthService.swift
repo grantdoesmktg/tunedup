@@ -14,6 +14,7 @@ class AuthService: ObservableObject {
 
     private let apiClient = APIClient.shared
     private let keychain = KeychainService.shared
+    private let pinReauthDays = 30
 
     private init() {
         checkAuthState()
@@ -22,14 +23,27 @@ class AuthService: ObservableObject {
     // MARK: - Check Auth State
 
     func checkAuthState() {
-        if let token = keychain.getSessionToken(),
-           let email = keychain.getUserEmail(),
+        if let email = keychain.getUserEmail(),
            let userId = keychain.getUserId() {
-            // We have a stored session, user needs to verify PIN or is already authenticated
-            // For now, assume authenticated if we have a token
-            // In production, you might want to verify the token is still valid
             currentUser = User(id: userId, email: email, hasPin: true)
-            authState = .authenticated(currentUser!)
+
+            // Require PIN re-auth every 30 days
+            if let lastPin = keychain.getLastPinVerifiedAt() {
+                let days = Calendar.current.dateComponents([.day], from: lastPin, to: Date()).day ?? 0
+                if days >= pinReauthDays {
+                    authState = .awaitingPin
+                    return
+                }
+            } else {
+                authState = .awaitingPin
+                return
+            }
+
+            if keychain.getSessionToken() != nil {
+                authState = .authenticated(currentUser!)
+            } else {
+                authState = .awaitingPin
+            }
         } else {
             authState = .unauthenticated
         }
@@ -48,6 +62,7 @@ class AuthService: ObservableObject {
         // Save to keychain
         keychain.saveSessionToken(response.sessionToken)
         keychain.saveUserInfo(email: response.user.email, userId: response.user.id)
+        keychain.saveLastPinVerified(at: Date())
 
         currentUser = response.user
 
@@ -67,12 +82,17 @@ class AuthService: ObservableObject {
             let updatedUser = User(id: user.id, email: user.email, hasPin: true)
             currentUser = updatedUser
             authState = .authenticated(updatedUser)
+            keychain.saveLastPinVerified(at: Date())
         }
     }
 
     func verifyPin(_ pin: String) async throws -> Bool {
         let response = try await apiClient.verifyPin(pin)
         if response.verified, let user = currentUser {
+            if let token = response.sessionToken {
+                keychain.saveSessionToken(token)
+            }
+            keychain.saveLastPinVerified(at: Date())
             authState = .authenticated(user)
             return true
         }

@@ -29,6 +29,7 @@ export const pinSetSchema = z.object({
 
 export const pinVerifySchema = z.object({
   pin: pinSchema,
+  userId: z.string().cuid().optional(),
 });
 
 // Vehicle input
