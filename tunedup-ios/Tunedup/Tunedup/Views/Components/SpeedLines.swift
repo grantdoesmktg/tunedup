@@ -179,6 +179,123 @@ struct NoiseOverlay: View {
     }
 }
 
+// MARK: - Particle Snowfall Background
+
+struct ParticleSnowfall: View {
+    let particleCount: Int
+
+    init(particleCount: Int = 40) {
+        self.particleCount = particleCount
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                ForEach(0..<particleCount, id: \.self) { index in
+                    SnowParticle(
+                        screenSize: geometry.size,
+                        color: index % 2 == 0 ? TunedUpTheme.Colors.cyan : TunedUpTheme.Colors.magenta,
+                        index: index
+                    )
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+struct SnowParticle: View {
+    let screenSize: CGSize
+    let color: Color
+    let index: Int
+
+    @State private var yOffset: CGFloat = 0
+    @State private var xDrift: CGFloat = 0
+    @State private var opacity: Double = 0
+
+    // Randomized per-particle properties
+    private let startX: CGFloat
+    private let size: CGFloat
+    private let duration: Double
+    private let delay: Double
+    private let driftAmount: CGFloat
+    private let baseOpacity: Double
+
+    init(screenSize: CGSize, color: Color, index: Int) {
+        self.screenSize = screenSize
+        self.color = color
+        self.index = index
+
+        // Generate stable random values per particle
+        let seed = UInt64(index * 12345)
+        var rng = SeededRandomNumberGenerator(seed: seed)
+
+        self.startX = CGFloat.random(in: 0...1, using: &rng) * screenSize.width
+        self.size = CGFloat.random(in: 1.5...3.5, using: &rng)
+        self.duration = Double.random(in: 12...22, using: &rng)
+        self.delay = Double.random(in: 0...8, using: &rng)
+        self.driftAmount = CGFloat.random(in: -30...30, using: &rng)
+        self.baseOpacity = Double.random(in: 0.15...0.4, using: &rng)
+    }
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: size, height: size)
+            .blur(radius: size * 0.4) // Soft blur for that dreamy look
+            .opacity(opacity)
+            .position(
+                x: startX + xDrift,
+                y: yOffset
+            )
+            .onAppear {
+                // Start above the screen
+                yOffset = -50
+                opacity = 0
+
+                // Animate falling
+                withAnimation(
+                    Animation.linear(duration: duration)
+                        .repeatForever(autoreverses: false)
+                        .delay(delay)
+                ) {
+                    yOffset = screenSize.height + 50
+                }
+
+                // Animate horizontal drift
+                withAnimation(
+                    Animation.easeInOut(duration: duration / 2)
+                        .repeatForever(autoreverses: true)
+                        .delay(delay)
+                ) {
+                    xDrift = driftAmount
+                }
+
+                // Fade in
+                withAnimation(
+                    Animation.easeIn(duration: 2)
+                        .delay(delay)
+                ) {
+                    opacity = baseOpacity
+                }
+            }
+    }
+}
+
+// Simple seeded RNG for consistent particle randomization
+struct SeededRandomNumberGenerator: RandomNumberGenerator {
+    var state: UInt64
+
+    init(seed: UInt64) {
+        state = seed
+    }
+
+    mutating func next() -> UInt64 {
+        state = state &* 6364136223846793005 &+ 1442695040888963407
+        return state
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -198,6 +315,8 @@ struct NoiseOverlay: View {
             size: 300,
             position: CGPoint(x: 100, y: 500)
         )
+
+        ParticleSnowfall()
 
         VStack {
             Spacer()

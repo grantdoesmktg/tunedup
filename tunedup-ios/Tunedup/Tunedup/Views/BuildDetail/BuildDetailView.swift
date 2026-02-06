@@ -19,6 +19,10 @@ struct BuildDetailView: View {
             TunedUpTheme.Colors.pureBlack
                 .ignoresSafeArea()
 
+            // Particle snowfall effect
+            ParticleSnowfall(particleCount: 35)
+                .ignoresSafeArea()
+
             if viewModel.isLoading {
                 LoadingView()
             } else if let build = viewModel.build {
@@ -487,29 +491,10 @@ struct ModDetailCard: View {
             }) {
                 HStack {
                     VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.xs) {
-                        HStack(spacing: 6) {
-                            Text(mod.name)
-                                .font(TunedUpTheme.Typography.bodyBold)
-                                .foregroundColor(TunedUpTheme.Colors.textPrimary)
-
-                            if let exec = execution, !exec.diyable {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "wrench.and.screwdriver.fill")
-                                        .font(.system(size: 10))
-                                    Text("Pro Install")
-                                        .font(TunedUpTheme.Typography.caption)
-                                }
-                                .foregroundColor(TunedUpTheme.Colors.warning)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(TunedUpTheme.Colors.warning.opacity(0.15))
-                                .cornerRadius(TunedUpTheme.Radius.small)
-                            }
-
-                            if synergyCount > 0 {
-                                ModSynergyBadge(count: synergyCount)
-                            }
-                        }
+                        Text(mod.name)
+                            .font(TunedUpTheme.Typography.bodyBold)
+                            .foregroundColor(TunedUpTheme.Colors.textPrimary)
+                            .lineLimit(2)
 
                         Text(mod.category.capitalized)
                             .font(TunedUpTheme.Typography.caption)
@@ -525,6 +510,20 @@ struct ModDetailCard: View {
 
                         if let exec = execution {
                             DIYBadge(diyable: exec.diyable, difficulty: exec.difficulty)
+                        }
+
+                        if let exec = execution, !exec.diyable {
+                            HStack(spacing: 4) {
+                                Image(systemName: "wrench.and.screwdriver.fill")
+                                    .font(.system(size: 10))
+                                Text("Pro Install")
+                                    .font(TunedUpTheme.Typography.caption)
+                            }
+                            .foregroundColor(TunedUpTheme.Colors.warning)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(TunedUpTheme.Colors.warning.opacity(0.15))
+                            .cornerRadius(TunedUpTheme.Radius.small)
                         }
                     }
 
