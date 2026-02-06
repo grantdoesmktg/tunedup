@@ -245,11 +245,35 @@ struct BaselinePerformance: Codable {
     let weight: Int
     let zeroToSixty: Double
     let quarterMile: QuarterMile
+
+    enum CodingKeys: String, CodingKey {
+        case hp, whp, torque, weight, zeroToSixty, quarterMile
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        hp = try container.decodeLossyInt(forKey: .hp)
+        whp = try container.decodeLossyInt(forKey: .whp)
+        torque = try container.decodeLossyInt(forKey: .torque)
+        weight = try container.decodeLossyInt(forKey: .weight)
+        zeroToSixty = try container.decode(Double.self, forKey: .zeroToSixty)
+        quarterMile = try container.decode(QuarterMile.self, forKey: .quarterMile)
+    }
 }
 
 struct QuarterMile: Codable {
     let time: Double
     let trapSpeed: Int
+
+    enum CodingKeys: String, CodingKey {
+        case time, trapSpeed
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        time = try container.decode(Double.self, forKey: .time)
+        trapSpeed = try container.decodeLossyInt(forKey: .trapSpeed)
+    }
 }
 
 struct StagePerformance: Codable {
@@ -265,6 +289,16 @@ struct StagePerformance: Codable {
 struct ValueRange: Codable {
     let low: Int
     let high: Int
+
+    enum CodingKeys: String, CodingKey {
+        case low, high
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        low = try container.decodeLossyInt(forKey: .low)
+        high = try container.decodeLossyInt(forKey: .high)
+    }
 
     var formatted: String {
         if low == high {
@@ -290,6 +324,27 @@ struct DoubleRange: Codable {
 struct QuarterMileRange: Codable {
     let time: DoubleRange
     let trapSpeed: ValueRange
+}
+
+// MARK: - Lossy Int Decoding
+
+extension KeyedDecodingContainer {
+    func decodeLossyInt(forKey key: Key) throws -> Int {
+        if let intValue = try? decode(Int.self, forKey: key) {
+            return intValue
+        }
+        if let doubleValue = try? decode(Double.self, forKey: key) {
+            return Int(doubleValue.rounded())
+        }
+        if let stringValue = try? decode(String.self, forKey: key),
+           let doubleValue = Double(stringValue) {
+            return Int(doubleValue.rounded())
+        }
+        throw DecodingError.typeMismatch(
+            Int.self,
+            DecodingError.Context(codingPath: codingPath + [key], debugDescription: "Expected Int-compatible value")
+        )
+    }
 }
 
 // MARK: - Sourcing (Step F Output)
