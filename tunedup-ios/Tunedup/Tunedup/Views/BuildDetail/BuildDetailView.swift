@@ -307,22 +307,40 @@ struct PerformanceSection: View {
             .id(selectedStage) // Force re-create gauges on stage change for animation
 
             // 0-60 and 1/4 mile
-            HStack(spacing: TunedUpTheme.Spacing.md) {
-                if let zeroRange = cumulative.zeroToSixty,
-                   let quarterRange = cumulative.quarterMileTime {
-                    BeforeAfterStat(
-                        label: "0-60 MPH",
-                        before: "\(performance.baseline.zeroToSixty.formattedOneDecimal)s",
-                        after: zeroRange.formatted,
-                        improvement: "-\((performance.baseline.zeroToSixty - zeroRange.low).formattedOneDecimal)s"
-                    )
+            if let zeroRange = cumulative.zeroToSixty,
+               let quarterRange = cumulative.quarterMileTime {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: TunedUpTheme.Spacing.md) {
+                        BeforeAfterStat(
+                            label: "0-60 MPH",
+                            before: "\(performance.baseline.zeroToSixty.formattedOneDecimal)s",
+                            after: zeroRange.formatted,
+                            improvement: "-\((performance.baseline.zeroToSixty - zeroRange.low).formattedOneDecimal)s"
+                        )
 
-                    BeforeAfterStat(
-                        label: "1/4 Mile",
-                        before: "\(performance.baseline.quarterMile.time.formattedOneDecimal)s",
-                        after: quarterRange.formatted,
-                        improvement: "-\((performance.baseline.quarterMile.time - quarterRange.low).formattedOneDecimal)s"
-                    )
+                        BeforeAfterStat(
+                            label: "1/4 Mile",
+                            before: "\(performance.baseline.quarterMile.time.formattedOneDecimal)s",
+                            after: quarterRange.formatted,
+                            improvement: "-\((performance.baseline.quarterMile.time - quarterRange.low).formattedOneDecimal)s"
+                        )
+                    }
+
+                    VStack(spacing: TunedUpTheme.Spacing.md) {
+                        BeforeAfterStat(
+                            label: "0-60 MPH",
+                            before: "\(performance.baseline.zeroToSixty.formattedOneDecimal)s",
+                            after: zeroRange.formatted,
+                            improvement: "-\((performance.baseline.zeroToSixty - zeroRange.low).formattedOneDecimal)s"
+                        )
+
+                        BeforeAfterStat(
+                            label: "1/4 Mile",
+                            before: "\(performance.baseline.quarterMile.time.formattedOneDecimal)s",
+                            after: quarterRange.formatted,
+                            improvement: "-\((performance.baseline.quarterMile.time - quarterRange.low).formattedOneDecimal)s"
+                        )
+                    }
                 }
             }
         }
@@ -475,9 +493,17 @@ struct ModDetailCard: View {
                                 .foregroundColor(TunedUpTheme.Colors.textPrimary)
 
                             if let exec = execution, !exec.diyable {
-                                Image(systemName: "wrench.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(TunedUpTheme.Colors.warning)
+                                HStack(spacing: 4) {
+                                    Image(systemName: "wrench.and.screwdriver.fill")
+                                        .font(.system(size: 10))
+                                    Text("Pro Install")
+                                        .font(TunedUpTheme.Typography.caption)
+                                }
+                                .foregroundColor(TunedUpTheme.Colors.warning)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(TunedUpTheme.Colors.warning.opacity(0.15))
+                                .cornerRadius(TunedUpTheme.Radius.small)
                             }
 
                             if synergyCount > 0 {
@@ -593,6 +619,15 @@ struct ExecutionDetails: View {
                 .tracking(1)
 
             HStack(spacing: TunedUpTheme.Spacing.lg) {
+                // Recommendation
+                HStack(spacing: 4) {
+                    Image(systemName: execution.diyable ? "house.fill" : "wrench.and.screwdriver.fill")
+                        .font(.system(size: 12))
+                    Text(execution.diyable ? "DIY OK" : "Pro Install")
+                        .font(TunedUpTheme.Typography.caption)
+                }
+                .foregroundColor(execution.diyable ? TunedUpTheme.Colors.success : TunedUpTheme.Colors.warning)
+
                 // Time
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
@@ -645,7 +680,31 @@ struct ExecutionDetails: View {
 struct SourcingDetails: View {
     let sourcing: ModSourcing
 
+    private func cleanText(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count < 2 { return nil }
+        return trimmed
+    }
+
     var body: some View {
+        let paired = zip(
+            sourcing.reputableBrands,
+            sourcing.searchQueries.prefix(sourcing.reputableBrands.count)
+        ).compactMap { brand, query -> (String, String)? in
+            guard let display = cleanText(brand) ?? cleanText(query),
+                  let cleanedQuery = cleanText(query) ?? cleanText(brand) else {
+                return nil
+            }
+            return (display, cleanedQuery)
+        }
+
+        let extras = sourcing.searchQueries
+            .dropFirst(sourcing.reputableBrands.count)
+            .compactMap { query -> (String, String)? in
+                guard let cleaned = cleanText(query) else { return nil }
+                return (cleaned, cleaned)
+            }
+
         VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.sm) {
             Text("PARTS")
                 .font(TunedUpTheme.Typography.caption)
@@ -654,12 +713,12 @@ struct SourcingDetails: View {
 
             // Brand links
             FlowLayout(spacing: TunedUpTheme.Spacing.sm) {
-                ForEach(Array(zip(sourcing.reputableBrands, sourcing.searchQueries.prefix(sourcing.reputableBrands.count))), id: \.0) { brand, query in
+                ForEach(Array(paired), id: \.0) { brand, query in
                     BrandLink(brand: brand, searchQuery: query)
                 }
                 // Extra search queries without a matching brand name
-                ForEach(Array(sourcing.searchQueries.dropFirst(sourcing.reputableBrands.count)), id: \.self) { query in
-                    BrandLink(brand: query, searchQuery: query)
+                ForEach(Array(extras), id: \.0) { brand, query in
+                    BrandLink(brand: brand, searchQuery: query)
                 }
             }
         }
@@ -676,9 +735,12 @@ struct BrandLink: View {
     var body: some View {
         Button(action: {
             Haptics.impact(.light)
-            if let url = URL(string: "https://www.google.com/search?q=\(searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-                UIApplication.shared.open(url)
+            let encoded = searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            guard !encoded.isEmpty,
+                  let url = URL(string: "https://www.google.com/search?q=\(encoded)") else {
+                return
             }
+            UIApplication.shared.open(url)
         }) {
             HStack(spacing: 4) {
                 Text(brand)

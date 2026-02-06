@@ -859,6 +859,10 @@ struct GeneratingOverlay: View {
                             .font(TunedUpTheme.Typography.body)
                             .foregroundColor(TunedUpTheme.Colors.textSecondary)
                     }
+
+                    Text("This might take about 2 minutes")
+                        .font(TunedUpTheme.Typography.caption)
+                        .foregroundColor(TunedUpTheme.Colors.textTertiary)
                 }
 
                 // Mechanic quip ticker

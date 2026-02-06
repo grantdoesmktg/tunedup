@@ -24,9 +24,7 @@ struct SynergyIndicator: View {
                         .frame(width: 32, height: 32)
                         .scaleEffect(isPulsing ? 1.5 : 1.0)
 
-                    Image(systemName: "link")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(TunedUpTheme.Colors.magenta)
+                    // Removed link icon per UX feedback; keep pulsing indicator only
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -116,9 +114,6 @@ struct ModSynergyBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "link")
-                .font(.system(size: 10, weight: .semibold))
-
             Text("×\(count)")
                 .font(TunedUpTheme.Typography.caption)
         }
