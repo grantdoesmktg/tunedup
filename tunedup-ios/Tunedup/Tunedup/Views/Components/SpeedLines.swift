@@ -209,15 +209,16 @@ struct SnowParticle: View {
     let color: Color
     let index: Int
 
-    @State private var yOffset: CGFloat = 0
+    @State private var yOffset: CGFloat = -50
     @State private var xDrift: CGFloat = 0
     @State private var opacity: Double = 0
+    @State private var isAnimating = false
 
     // Randomized per-particle properties
     private let startX: CGFloat
     private let size: CGFloat
     private let duration: Double
-    private let delay: Double
+    private let initialDelay: Double
     private let driftAmount: CGFloat
     private let baseOpacity: Double
 
@@ -231,54 +232,92 @@ struct SnowParticle: View {
         var rng = SeededRandomNumberGenerator(seed: seed)
 
         self.startX = CGFloat.random(in: 0...1, using: &rng) * screenSize.width
-        self.size = CGFloat.random(in: 1.5...3.5, using: &rng)
-        self.duration = Double.random(in: 12...22, using: &rng)
-        self.delay = Double.random(in: 0...8, using: &rng)
-        self.driftAmount = CGFloat.random(in: -30...30, using: &rng)
-        self.baseOpacity = Double.random(in: 0.15...0.4, using: &rng)
+        self.size = CGFloat.random(in: 2.5...5.0, using: &rng)
+        self.duration = Double.random(in: 10...18, using: &rng)
+        self.initialDelay = Double.random(in: 0...3, using: &rng)
+        self.driftAmount = CGFloat.random(in: -40...40, using: &rng)
+        self.baseOpacity = Double.random(in: 0.35...0.65, using: &rng)
     }
 
     var body: some View {
         Circle()
             .fill(color)
             .frame(width: size, height: size)
-            .blur(radius: size * 0.4) // Soft blur for that dreamy look
+            .blur(radius: size * 0.3)
             .opacity(opacity)
             .position(
                 x: startX + xDrift,
                 y: yOffset
             )
             .onAppear {
-                // Start above the screen
-                yOffset = -50
-                opacity = 0
-
-                // Animate falling
-                withAnimation(
-                    Animation.linear(duration: duration)
-                        .repeatForever(autoreverses: false)
-                        .delay(delay)
-                ) {
-                    yOffset = screenSize.height + 50
-                }
-
-                // Animate horizontal drift
-                withAnimation(
-                    Animation.easeInOut(duration: duration / 2)
-                        .repeatForever(autoreverses: true)
-                        .delay(delay)
-                ) {
-                    xDrift = driftAmount
-                }
-
-                // Fade in
-                withAnimation(
-                    Animation.easeIn(duration: 2)
-                        .delay(delay)
-                ) {
-                    opacity = baseOpacity
-                }
+                startFalling()
             }
+    }
+
+    private func startFalling() {
+        // Reset to top
+        yOffset = -50
+        xDrift = 0
+
+        // Fade in quickly
+        withAnimation(.easeIn(duration: 0.5).delay(initialDelay)) {
+            opacity = baseOpacity
+        }
+
+        // Animate falling
+        withAnimation(.linear(duration: duration).delay(initialDelay)) {
+            yOffset = screenSize.height + 50
+        }
+
+        // Animate horizontal drift
+        withAnimation(.easeInOut(duration: duration / 2).delay(initialDelay)) {
+            xDrift = driftAmount
+        }
+
+        // Schedule the next fall cycle
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + initialDelay + 0.1) {
+            // Reset and restart (no initial delay on subsequent cycles)
+            yOffset = -50
+            xDrift = 0
+            opacity = 0
+
+            withAnimation(.easeIn(duration: 0.3)) {
+                opacity = baseOpacity
+            }
+
+            withAnimation(.linear(duration: duration)) {
+                yOffset = screenSize.height + 50
+            }
+
+            withAnimation(.easeInOut(duration: duration / 2)) {
+                xDrift = -driftAmount // Alternate drift direction
+            }
+
+            // Continue the loop
+            scheduleNextCycle()
+        }
+    }
+
+    private func scheduleNextCycle() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) {
+            yOffset = -50
+            xDrift = 0
+            opacity = 0
+
+            withAnimation(.easeIn(duration: 0.3)) {
+                opacity = baseOpacity
+            }
+
+            withAnimation(.linear(duration: duration)) {
+                yOffset = screenSize.height + 50
+            }
+
+            withAnimation(.easeInOut(duration: duration / 2)) {
+                xDrift = driftAmount
+            }
+
+            scheduleNextCycle()
+        }
     }
 }
 

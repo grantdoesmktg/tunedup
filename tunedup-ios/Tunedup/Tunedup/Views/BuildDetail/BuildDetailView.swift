@@ -20,7 +20,7 @@ struct BuildDetailView: View {
                 .ignoresSafeArea()
 
             // Particle snowfall effect
-            ParticleSnowfall(particleCount: 35)
+            ParticleSnowfall(particleCount: 50)
                 .ignoresSafeArea()
 
             if viewModel.isLoading {
