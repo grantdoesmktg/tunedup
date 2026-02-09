@@ -509,9 +509,19 @@ struct GoalSlider: View {
                     .foregroundColor(color)
             }
 
-            // Custom segmented slider
+            // Custom segmented slider - podium style
+            // Heights: 1 and 5 = smallest, 2 and 4 = medium, 3 = tallest (winner's podium)
             HStack(spacing: TunedUpTheme.Spacing.sm) {
                 ForEach(1...5, id: \.self) { level in
+                    let height: CGFloat = {
+                        switch level {
+                        case 1, 5: return 8   // Smallest - current size
+                        case 2, 4: return 16  // Medium
+                        case 3: return 24     // Tallest - winner's podium
+                        default: return 8
+                        }
+                    }()
+
                     Button(action: {
                         Haptics.selection()
                         withAnimation(TunedUpTheme.Animation.springFast) {
@@ -520,10 +530,11 @@ struct GoalSlider: View {
                     }) {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(level <= value.wrappedValue ? color : TunedUpTheme.Colors.cardSurface)
-                            .frame(height: 8)
+                            .frame(height: height)
                     }
                 }
             }
+            .frame(height: 24, alignment: .bottom) // Align all bars to bottom
         }
         .padding(TunedUpTheme.Spacing.md)
         .background(TunedUpTheme.Colors.cardSurface)
@@ -881,13 +892,7 @@ struct GeneratingOverlay: View {
                         .transition(.opacity)
                 }
 
-                // Step progress
-                PipelineStepList(
-                    currentStep: currentStep,
-                    completedSteps: completedSteps,
-                    failedStep: nil
-                )
-                .padding(.horizontal, TunedUpTheme.Spacing.xl)
+                // Removed 7-step progress list per UX feedback
             }
         }
         .transition(.opacity)
