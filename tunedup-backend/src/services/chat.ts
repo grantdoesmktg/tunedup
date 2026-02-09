@@ -156,7 +156,7 @@ export async function processChat(
 
   // Format history (reverse to chronological order)
   const history = thread.messages.reverse().map((m) => ({
-    role: m.role as 'user' | 'model',
+    role: m.role === 'assistant' ? 'model' : 'user',
     content: m.content,
   }));
 
