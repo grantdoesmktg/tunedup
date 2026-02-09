@@ -850,11 +850,6 @@ struct GeneratingOverlay: View {
                 .opacity(0.6)
 
             VStack(spacing: TunedUpTheme.Spacing.xxl) {
-                // Dynamic build badge
-                BuildBadgeProgress(
-                    currentStep: currentStep,
-                    completedSteps: completedSteps
-                )
 
                 VStack(spacing: TunedUpTheme.Spacing.sm) {
                     Text("Building Your Plan")
@@ -892,7 +887,13 @@ struct GeneratingOverlay: View {
                         .transition(.opacity)
                 }
 
-                // Removed 7-step progress list per UX feedback
+                // Step progress
+                PipelineStepList(
+                    currentStep: currentStep,
+                    completedSteps: completedSteps,
+                    failedStep: nil
+                )
+                .padding(.horizontal, TunedUpTheme.Spacing.xl)
             }
         }
         .transition(.opacity)
