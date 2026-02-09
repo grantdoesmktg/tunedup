@@ -80,7 +80,7 @@ struct NewBuildWizardView: View {
                 )
 
                 // Generate Build button (only shown on last step)
-                if viewModel.currentStep == .location {
+                if viewModel.currentStep == .mods {
                     WizardGenerateButton(
                         canProceed: viewModel.canProceed,
                         isGenerating: viewModel.isGenerating,
@@ -118,7 +118,6 @@ enum WizardStep: Int, CaseIterable {
     case goals
     case preferences
     case mods
-    case location
 
     var title: String {
         switch self {
@@ -127,7 +126,6 @@ enum WizardStep: Int, CaseIterable {
         case .goals: return "Build Goals"
         case .preferences: return "Preferences"
         case .mods: return "Existing Mods"
-        case .location: return "Location"
         }
     }
 
@@ -138,7 +136,6 @@ enum WizardStep: Int, CaseIterable {
         case .goals: return "What matters most to you?"
         case .preferences: return "A few more details"
         case .mods: return "What have you already done?"
-        case .location: return "For finding local shops"
         }
     }
 }
@@ -244,13 +241,11 @@ struct WizardStepContent: View {
                     PreferencesStepContent(viewModel: viewModel)
                 case .mods:
                     ModsStepContent(viewModel: viewModel)
-                case .location:
-                    LocationStepContent(viewModel: viewModel)
                 }
             }
             .padding(.horizontal, TunedUpTheme.Spacing.lg)
             .padding(.top, TunedUpTheme.Spacing.lg)
-            .padding(.bottom, step == .location ? 140 : 40) // Extra space for Generate button
+            .padding(.bottom, step == .mods ? 140 : 40) // Extra space for Generate button
         }
         .onTapGesture {
             // Dismiss keyboard on tap
@@ -651,38 +646,6 @@ struct ModsStepContent: View {
             Text("Examples: cold air intake, lowering springs, exhaust, tune")
                 .font(TunedUpTheme.Typography.caption)
                 .foregroundColor(TunedUpTheme.Colors.textTertiary)
-        }
-    }
-}
-
-// MARK: - Location Step
-
-struct LocationStepContent: View {
-    @ObservedObject var viewModel: WizardViewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.lg) {
-            Text("This helps us suggest local shops and account for regional factors.")
-                .font(TunedUpTheme.Typography.body)
-                .foregroundColor(TunedUpTheme.Colors.textSecondary)
-
-            WizardTextField(
-                label: "City",
-                placeholder: "Los Angeles, CA",
-                text: $viewModel.city
-            )
-
-            // Optional marker
-            HStack {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 14))
-                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
-
-                Text("This field is optional")
-                    .font(TunedUpTheme.Typography.caption)
-                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
-            }
-            .padding(.top, TunedUpTheme.Spacing.sm)
         }
     }
 }

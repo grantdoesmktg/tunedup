@@ -61,8 +61,6 @@ class WizardViewModel: ObservableObject {
             return true
         case .mods:
             return true
-        case .location:
-            return true
         }
     }
 

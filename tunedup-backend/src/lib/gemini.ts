@@ -44,13 +44,6 @@ function getProModel(): GenerativeModel {
   });
 }
 
-function getFlashModel(): GenerativeModel {
-  return genAI.getGenerativeModel({
-    model: FLASH_MODEL,
-    generationConfig: chatConfig,
-  });
-}
-
 function getFlashModelForPipeline(): GenerativeModel {
   return genAI.getGenerativeModel({
     model: FLASH_MODEL,
@@ -117,12 +110,20 @@ export async function callPipelineStep<T>(
 // Chat Calls (Flash Model)
 // ============================================
 
+// Get Pro model configured for chat (more creative settings)
+function getProModelForChat(): GenerativeModel {
+  return genAI.getGenerativeModel({
+    model: PRO_MODEL,
+    generationConfig: chatConfig,
+  });
+}
+
 export async function callChat(
   systemPrompt: string,
   messages: Array<{ role: 'user' | 'model'; content: string }>,
   userMessage: string
 ): Promise<GeminiResponse<string>> {
-  const model = getFlashModel();
+  const model = getProModelForChat();
 
   // Build history
   const history = [
