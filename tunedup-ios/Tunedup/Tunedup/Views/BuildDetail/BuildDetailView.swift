@@ -57,7 +57,8 @@ struct BuildDetailView: View {
                             StageDetailView(
                                 stage: plan.stages[safe: selectedStage],
                                 execution: build.execution,
-                                sourcing: build.sourcing
+                                sourcing: build.sourcing,
+                                presentation: build.presentation
                             )
                             .padding(.horizontal, TunedUpTheme.Spacing.lg)
                             .id(selectedStage) // Force refresh on stage change
@@ -423,6 +424,7 @@ struct StageDetailView: View {
     let stage: Stage?
     let execution: ExecutionPlan?
     let sourcing: Sourcing?
+    let presentation: BuildPresentation?
 
     var body: some View {
         if let stage = stage {
@@ -432,14 +434,6 @@ struct StageDetailView: View {
                     .font(TunedUpTheme.Typography.body)
                     .foregroundColor(TunedUpTheme.Colors.textSecondary)
                     .padding(.top, TunedUpTheme.Spacing.md)
-
-                // Synergy groups
-                ForEach(stage.synergyGroups) { group in
-                    SynergyIndicator(
-                        synergyGroup: group,
-                        isExpanded: true
-                    )
-                }
 
                 // Mods list
                 VStack(spacing: TunedUpTheme.Spacing.md) {
@@ -451,6 +445,23 @@ struct StageDetailView: View {
                             synergyCount: stage.synergyGroups.filter { $0.modIds.contains(mod.id) }.count
                         )
                     }
+                }
+
+                // Final summary (one paragraph at bottom of parts list)
+                if let summary = presentation?.summary, !summary.isEmpty {
+                    VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.sm) {
+                        Text("SUMMARY")
+                            .font(TunedUpTheme.Typography.caption)
+                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                            .tracking(1)
+
+                        Text(summary)
+                            .font(TunedUpTheme.Typography.body)
+                            .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    }
+                    .padding(TunedUpTheme.Spacing.sm)
+                    .background(TunedUpTheme.Colors.darkSurface)
+                    .cornerRadius(TunedUpTheme.Radius.small)
                 }
             }
         }
@@ -794,32 +805,46 @@ struct FlowLayout: Layout {
 
 struct AssumptionsSection: View {
     let assumptions: [String]
+    @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: TunedUpTheme.Spacing.md) {
-            HStack {
-                Image(systemName: "info.circle")
-                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
-                Text("Assumptions & Disclaimer")
-                    .font(TunedUpTheme.Typography.bodyBold)
-                    .foregroundColor(TunedUpTheme.Colors.textSecondary)
-            }
-
-            ForEach(assumptions, id: \.self) { assumption in
-                HStack(alignment: .top, spacing: TunedUpTheme.Spacing.sm) {
-                    Text("•")
+            Button(action: {
+                Haptics.selection()
+                withAnimation(TunedUpTheme.Animation.spring) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "info.circle")
                         .foregroundColor(TunedUpTheme.Colors.textTertiary)
-                    Text(assumption)
-                        .font(TunedUpTheme.Typography.footnote)
+                    Text("Assumptions & Disclaimer")
+                        .font(TunedUpTheme.Typography.bodyBold)
+                        .foregroundColor(TunedUpTheme.Colors.textSecondary)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(TunedUpTheme.Colors.textTertiary)
                 }
             }
 
-            Text("Estimates are approximate and depend on tune quality, installation, fuel, altitude, and driver skill. Always consult a professional before making modifications.")
-                .font(TunedUpTheme.Typography.caption)
-                .foregroundColor(TunedUpTheme.Colors.textTertiary)
-                .italic()
-                .padding(.top, TunedUpTheme.Spacing.sm)
+            if isExpanded {
+                ForEach(assumptions, id: \.self) { assumption in
+                    HStack(alignment: .top, spacing: TunedUpTheme.Spacing.sm) {
+                        Text("•")
+                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                        Text(assumption)
+                            .font(TunedUpTheme.Typography.footnote)
+                            .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                    }
+                }
+
+                Text("Estimates are approximate and depend on tune quality, installation, fuel, altitude, and driver skill. Always consult a professional before making modifications.")
+                    .font(TunedUpTheme.Typography.caption)
+                    .foregroundColor(TunedUpTheme.Colors.textTertiary)
+                    .italic()
+                    .padding(.top, TunedUpTheme.Spacing.sm)
+            }
         }
         .padding(TunedUpTheme.Spacing.md)
         .background(TunedUpTheme.Colors.cardSurface)
