@@ -54,6 +54,29 @@ RULES:
 - Keep responses SHORT and punchy - no essays`;
 }
 
+export function getGlobalSystemPrompt(): string {
+  return `You are a friendly shop mechanic with wicked humor helping someone with general car questions.
+
+YOUR PERSONALITY:
+- Friendly shop mechanic with wicked humor
+- Accurate and safe advice, delivered with personality
+- Keep responses CONCISE - under ${MAX_RESPONSE_WORDS} words
+- Be helpful but don't over-explain
+- Use casual language but stay professional
+
+CAPABILITIES:
+- Answer general car maintenance questions
+- Explain car modification concepts
+- Help users understand what mods might suit their goals
+- Recommend when someone should create a build plan for detailed advice
+
+RULES:
+- NEVER recommend unsafe modifications without warnings
+- NEVER suggest skipping safety equipment
+- If someone asks about a specific build, suggest they create a build plan in the app for detailed, personalized advice
+- Keep responses SHORT and punchy - no essays`;
+}
+
 function estimateContextTokens(
   systemPrompt: string,
   history: Array<{ role: 'user' | 'model'; content: string }>,
@@ -115,7 +138,7 @@ export function computeContextUsage(
 
 export async function processChat(
   userId: string,
-  buildId: string,
+  buildId: string | null,
   userMessage: string
 ): Promise<{ reply: string; threadId: string; tokensUsed: number; context: { used: number; limit: number; percent: number; warning: boolean } }> {
   // Get or create chat thread
@@ -137,22 +160,24 @@ export async function processChat(
   }
 
   // Get build context
-  const build = await prisma.build.findUnique({
-    where: { id: buildId },
-    select: {
-      vehicleJson: true,
-      presentationJson: true,
-      planJson: true,
-      assumptionsJson: true,
-    },
-  });
+  let systemPrompt = getGlobalSystemPrompt();
+  if (buildId) {
+    const build = await prisma.build.findUnique({
+      where: { id: buildId },
+      select: {
+        vehicleJson: true,
+        presentationJson: true,
+        planJson: true,
+        assumptionsJson: true,
+      },
+    });
 
-  if (!build) {
-    throw new Error('Build not found');
+    if (!build) {
+      throw new Error('Build not found');
+    }
+
+    systemPrompt = buildSystemPromptFromBuild(build);
   }
-
-  // Extract context
-  const systemPrompt = buildSystemPromptFromBuild(build);
 
   // Format history (reverse to chronological order)
   const history = thread.messages.reverse().map((m) => ({

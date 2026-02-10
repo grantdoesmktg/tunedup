@@ -94,8 +94,9 @@ model Build {
   failedStep     String? // which step failed, if any
   errorMessage   String? // error details
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatThreads ChatThread[]
+  progress    BuildProgress[]
 
   @@index([userId])
   @@map("builds")
@@ -108,10 +109,10 @@ model Build {
 model ChatThread {
   id        String   @id @default(cuid())
   userId    String
-  buildId   String
+  buildId   String?
   createdAt DateTime @default(now())
 
-  build    Build         @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  build    Build?        @relation(fields: [buildId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 
   @@index([buildId])
@@ -130,6 +131,26 @@ model ChatMessage {
 
   @@index([threadId])
   @@map("chat_messages")
+}
+
+// ============================================
+// BUILD PROGRESS TRACKING
+// ============================================
+
+model BuildProgress {
+  id          String    @id @default(cuid())
+  buildId     String
+  modId       String    // References mod ID from planJson
+  status      String    @default("pending") // pending, purchased, installed
+  purchasedAt DateTime?
+  installedAt DateTime?
+  notes       String?   // User notes
+
+  build Build @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@unique([buildId, modId])
+  @@index([buildId])
+  @@map("build_progress")
 }
 
 // ============================================

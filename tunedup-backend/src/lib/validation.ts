@@ -69,7 +69,7 @@ export const createBuildSchema = z.object({
 
 // Chat
 export const chatSchema = z.object({
-  buildId: z.string().cuid(),
+  buildId: z.string().cuid().optional(),
   message: z.string().min(1).max(500, 'Message must be under 500 characters'),
 });
 

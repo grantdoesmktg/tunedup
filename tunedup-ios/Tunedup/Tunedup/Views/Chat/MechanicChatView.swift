@@ -4,7 +4,7 @@ import SwiftUI
 // Chat UI with styled bubbles and typing indicators
 
 struct MechanicChatView: View {
-    let buildId: String
+    let buildId: String?
 
     @StateObject private var viewModel = ChatViewModel()
     @Environment(\.dismiss) private var dismiss
@@ -37,7 +37,7 @@ struct MechanicChatView: View {
                         LazyVStack(spacing: TunedUpTheme.Spacing.md) {
                             // Welcome message
                             if viewModel.messages.isEmpty && !viewModel.isTyping {
-                                WelcomeMessage()
+                                WelcomeMessage(hasBuild: buildId != nil)
                                     .padding(.top, TunedUpTheme.Spacing.xl)
                             }
 
@@ -109,7 +109,7 @@ struct MechanicChatView: View {
                 Task { await viewModel.resetChat(buildId: buildId) }
             }
         } message: {
-            Text("This will clear the chat history for this build.")
+            Text(buildId == nil ? "This will clear the global chat history." : "This will clear the chat history for this build.")
         }
     }
 }
@@ -184,6 +184,8 @@ struct ChatHeader: View {
 // MARK: - Welcome Message
 
 struct WelcomeMessage: View {
+    let hasBuild: Bool
+
     var body: some View {
         VStack(spacing: TunedUpTheme.Spacing.lg) {
             // Mechanic avatar
@@ -202,7 +204,11 @@ struct WelcomeMessage: View {
                     .font(TunedUpTheme.Typography.title2)
                     .foregroundColor(TunedUpTheme.Colors.textPrimary)
 
-                Text("I'm your personal mechanic assistant. Ask me anything about your build - parts compatibility, installation tips, or whether that eBay turbo is actually worth it (spoiler: probably not).")
+                Text(
+                    hasBuild
+                        ? "I'm your personal mechanic assistant. Ask me anything about your build - parts compatibility, installation tips, or whether that eBay turbo is actually worth it (spoiler: probably not)."
+                        : "I'm your personal mechanic assistant. Ask me anything about cars - maintenance tips, mod ideas, or what to do with that weird noise your engine's making."
+                )
                     .font(TunedUpTheme.Typography.body)
                     .foregroundColor(TunedUpTheme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
@@ -214,7 +220,7 @@ struct WelcomeMessage: View {
                     .font(TunedUpTheme.Typography.caption)
                     .foregroundColor(TunedUpTheme.Colors.textTertiary)
 
-                QuickPromptGrid()
+                QuickPromptGrid(hasBuild: hasBuild)
             }
         }
         .padding(TunedUpTheme.Spacing.lg)
@@ -222,12 +228,23 @@ struct WelcomeMessage: View {
 }
 
 struct QuickPromptGrid: View {
-    let prompts = [
-        "What should I do first?",
-        "Is this build streetable?",
-        "What tools do I need?",
-        "Can I DIY the tune?"
-    ]
+    let hasBuild: Bool
+    var prompts: [String] {
+        if hasBuild {
+            return [
+                "What should I do first?",
+                "Is this build streetable?",
+                "What tools do I need?",
+                "Can I DIY the tune?"
+            ]
+        }
+        return [
+            "What first mod would you do?",
+            "How do I make it more reliable?",
+            "Is a tune worth it?",
+            "Can I daily a turbo build?"
+        ]
+    }
 
     var body: some View {
         LazyVGrid(columns: [

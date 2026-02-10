@@ -9,6 +9,7 @@ struct BuildDetailView: View {
     @StateObject private var viewModel = BuildDetailViewModel()
     @State private var selectedStage: Int = 0
     @State private var showingChat = false
+    @State private var showingTracker = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
     @Environment(\.dismiss) private var dismiss
@@ -76,10 +77,36 @@ struct BuildDetailView: View {
                     }
                 }
 
-                // Floating chat button
+                // Floating action buttons
                 VStack {
                     Spacer()
-                    ChatFloatingButton(onTap: { showingChat = true })
+                    VStack(spacing: TunedUpTheme.Spacing.md) {
+                        // Ask Mechanic button
+                        ChatFloatingButton(onTap: { showingChat = true })
+
+                        // Let's Build This button
+                        Button(action: {
+                            Haptics.impact(.medium)
+                            showingTracker = true
+                        }) {
+                            HStack(spacing: TunedUpTheme.Spacing.sm) {
+                                Image(systemName: "checklist")
+                                    .font(.system(size: 18))
+                                Text("Let's Build This")
+                                    .font(TunedUpTheme.Typography.buttonSmall)
+                            }
+                            .foregroundColor(TunedUpTheme.Colors.cyan)
+                            .padding(.horizontal, TunedUpTheme.Spacing.md)
+                            .padding(.vertical, TunedUpTheme.Spacing.sm)
+                            .background(TunedUpTheme.Colors.cardSurface)
+                            .cornerRadius(TunedUpTheme.Radius.pill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: TunedUpTheme.Radius.pill)
+                                    .stroke(TunedUpTheme.Colors.cyan, lineWidth: 2)
+                            )
+                        }
+                    }
+                    .padding(.bottom, TunedUpTheme.Spacing.lg)
                 }
             } else if let error = viewModel.error {
                 ErrorView(message: error, onRetry: {
@@ -93,6 +120,11 @@ struct BuildDetailView: View {
         }
         .sheet(isPresented: $showingChat) {
             MechanicChatView(buildId: buildId)
+        }
+        .fullScreenCover(isPresented: $showingTracker) {
+            if let build = viewModel.build {
+                BuildTrackerView(build: build)
+            }
         }
         .alert("Delete Build?", isPresented: $showingDeleteConfirm) {
             Button("Cancel", role: .cancel) {}

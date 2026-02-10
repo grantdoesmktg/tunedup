@@ -14,7 +14,7 @@ class ChatViewModel: ObservableObject {
 
     private let apiClient = APIClient.shared
 
-    func sendMessage(buildId: String) async {
+    func sendMessage(buildId: String?) async {
         let trimmedText = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         guard trimmedText.count <= ChatConstants.maxMessageLength else {
@@ -59,7 +59,7 @@ class ChatViewModel: ObservableObject {
         isTyping = false
     }
 
-    func loadHistory(buildId: String) async {
+    func loadHistory(buildId: String?) async {
         do {
             let response = try await apiClient.getChatHistory(buildId: buildId)
             messages = response.messages
@@ -70,7 +70,7 @@ class ChatViewModel: ObservableObject {
         }
     }
 
-    func resetChat(buildId: String) async {
+    func resetChat(buildId: String?) async {
         do {
             try await apiClient.resetChat(buildId: buildId)
             messages = []

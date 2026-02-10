@@ -1,16 +1,16 @@
 # TunedUp Feature Implementation Plan
 
 > Created: 2026-02-09
-> Status: Planning
+> Status: In Progress
 
 This document outlines the implementation plan for the following features:
 1. **Build Sharing** - Generate shareable links for builds
 2. **Ask the Mechanic (Global)** - Chat without selecting a build first
-3. **Build Tracker** - "Let's Build This" checklist with install guides
+3. **Build Tracker** - "Let's Build This" checklist with install guides *(COMPLETED)*
 
 Also includes:
-- Switch chat from Gemini Flash to Gemini Pro
-- Remove location step from wizard
+- Switch chat from Gemini Flash to Gemini Pro *(COMPLETED)*
+- Remove location step from wizard *(COMPLETED)*
 
 ---
 
@@ -501,6 +501,8 @@ class ChatViewModel: ObservableObject {
 
 ## Feature 3: Build Tracker with Install Guides
 
+> **STATUS: COMPLETED** (2026-02-10)
+
 ### Overview
 
 Add a "Let's Build This" mode that converts the build plan into an interactive checklist. Each part has:
@@ -970,29 +972,49 @@ VStack {
 
 ### Implementation Tasks
 
-1. [ ] Add Prisma migration for `build_progress` table
-2. [ ] Implement `GET /api/builds/:id/progress` endpoint
-3. [ ] Implement `PATCH /api/builds/:id/progress/:modId` endpoint
-4. [ ] Implement `POST /api/builds/:id/install-guide` endpoint
-5. [ ] Create install guide AI prompt and Gemini call
-6. [ ] Create `BuildProgress.swift` models
-7. [ ] Create `BuildTrackerViewModel.swift`
-8. [ ] Create `BuildTrackerView.swift`
-9. [ ] Create `ModProgressCard.swift` with checkbox
-10. [ ] Create `InstallGuideSheet.swift`
-11. [ ] Create `InstallGuideViewModel.swift`
-12. [ ] Add "Let's Build This" button to `BuildDetailView`
+1. [x] Add Prisma migration for `build_progress` table
+2. [x] Implement `GET /api/builds/:id/progress` endpoint
+3. [x] Implement `PATCH /api/builds/:id/progress/:modId` endpoint
+4. [x] Implement `POST /api/builds/:id/install-guide` endpoint
+5. [x] Create install guide AI prompt and Gemini call
+6. [x] Create `BuildProgress.swift` models
+7. [x] Create `BuildTrackerViewModel.swift`
+8. [x] Create `BuildTrackerView.swift`
+9. [x] Create `ModProgressCard.swift` with checkbox
+10. [x] Create `InstallGuideSheet.swift`
+11. [x] Create `InstallGuideViewModel.swift`
+12. [x] Add "Let's Build This" button to `BuildDetailView`
 13. [ ] Test install guide generation for both DIY and shop-recommended mods
 
 **Estimated Time:** 8-12 hours
+**Actual Time:** Completed 2026-02-10
+
+### Files Created/Modified
+
+**Backend:**
+- `prisma/schema.prisma` - Added `BuildProgress` model
+- `prisma/migrations/` - Added baseline + build_progress migration
+- `src/app/api/builds/[id]/progress/route.ts` - GET progress endpoint
+- `src/app/api/builds/[id]/progress/[modId]/route.ts` - PATCH progress endpoint
+- `src/app/api/builds/[id]/install-guide/route.ts` - POST install guide endpoint
+- `src/types/api.ts` - Added progress and install guide types
+
+**iOS:**
+- `Models/BuildProgress.swift` - Progress and InstallGuide models
+- `ViewModels/BuildTrackerViewModel.swift` - Progress state management
+- `ViewModels/InstallGuideViewModel.swift` - Guide generation state
+- `Views/BuildTracker/BuildTrackerView.swift` - Main tracker UI
+- `Views/BuildTracker/InstallGuideSheet.swift` - Install guide display
+- `Views/BuildDetail/BuildDetailView.swift` - Added "Let's Build This" button
+- `Services/APIClient.swift` - Added progress and install guide API methods
 
 ---
 
 ## Implementation Order
 
-### Phase 1: Quick Wins (Day 1)
-1. Switch chat to Gemini Pro *(5 min)*
-2. Remove location step from wizard *(15 min)*
+### Phase 1: Quick Wins (Day 1) - COMPLETED
+1. ~~Switch chat to Gemini Pro~~ *(5 min)* - DONE
+2. ~~Remove location step from wizard~~ *(15 min)* - DONE
 
 ### Phase 2: Global Chat (Day 1-2)
 3. Make buildId nullable in chat API *(1 hr)*
@@ -1006,13 +1028,17 @@ VStack {
 9. Create SharedBuildView *(2 hr)*
 10. Add deep link handling *(1 hr)*
 
-### Phase 4: Build Tracker (Day 3-5)
-11. Create build_progress table and API *(2 hr)*
-12. Create install guide API endpoint *(2 hr)*
-13. Build iOS tracker UI *(4 hr)*
-14. Build install guide UI *(3 hr)*
+### Phase 4: Build Tracker (Day 3-5) - COMPLETED
+11. ~~Create build_progress table and API~~ *(2 hr)* - DONE
+12. ~~Create install guide API endpoint~~ *(2 hr)* - DONE
+13. ~~Build iOS tracker UI~~ *(4 hr)* - DONE
+14. ~~Build install guide UI~~ *(3 hr)* - DONE
 
 ### Total Estimated Time: 4-5 days
+
+### Progress Summary
+- **Completed:** Quick Wins (Phase 1), Build Tracker (Phase 4)
+- **Remaining:** Global Chat (Phase 2), Build Sharing (Phase 3)
 
 ---
 

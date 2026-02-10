@@ -9,6 +9,7 @@ struct GarageView: View {
     @State private var showingWizard = false
     @State private var selectedBuildId: String?
     @State private var showingLimitAlert = false
+    @State private var showingGlobalChat = false
 
     var body: some View {
         NavigationStack {
@@ -81,6 +82,17 @@ struct GarageView: View {
                     }
                 }
                 .padding(.top, TunedUpTheme.Spacing.md)
+
+                // Floating Ask Mechanic button (global)
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        GlobalChatButton(onTap: { showingGlobalChat = true })
+                    }
+                    .padding(.trailing, TunedUpTheme.Spacing.lg)
+                    .padding(.bottom, TunedUpTheme.Spacing.xl)
+                }
             }
             .navigationBarHidden(true)
             .refreshable {
@@ -109,6 +121,9 @@ struct GarageView: View {
                     }
                 })
             }
+            .sheet(isPresented: $showingGlobalChat) {
+                MechanicChatView(buildId: nil)
+            }
             .navigationDestination(item: $selectedBuildId) { buildId in
                 BuildDetailView(buildId: buildId)
             }
@@ -117,6 +132,32 @@ struct GarageView: View {
             } message: {
                 Text("You can save up to 3 builds. Delete one to create a new build.")
             }
+        }
+    }
+}
+
+// MARK: - Global Chat Button
+
+struct GlobalChatButton: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: {
+            Haptics.impact(.medium)
+            onTap()
+        }) {
+            HStack(spacing: TunedUpTheme.Spacing.sm) {
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.system(size: 18))
+                Text("Ask Mechanic")
+                    .font(TunedUpTheme.Typography.buttonSmall)
+            }
+            .foregroundColor(TunedUpTheme.Colors.pureBlack)
+            .padding(.horizontal, TunedUpTheme.Spacing.md)
+            .padding(.vertical, TunedUpTheme.Spacing.sm)
+            .background(TunedUpTheme.Colors.magenta)
+            .cornerRadius(TunedUpTheme.Radius.pill)
+            .shadow(color: TunedUpTheme.Colors.magenta.opacity(0.4), radius: 12, y: 4)
         }
     }
 }

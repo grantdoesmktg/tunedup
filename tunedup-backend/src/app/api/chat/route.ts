@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/lib/auth';
 import { checkUsageBlocked } from '@/lib/usage';
 import { validateRequest, chatSchema, ValidationError } from '@/lib/validation';
-import { buildSystemPromptFromBuild, computeContextUsage, processChat } from '@/services/chat';
+import { buildSystemPromptFromBuild, computeContextUsage, getGlobalSystemPrompt, processChat } from '@/services/chat';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -20,31 +20,35 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const buildId = searchParams.get('buildId');
-    if (!buildId) {
-      return NextResponse.json({ error: 'buildId is required' }, { status: 400 });
-    }
 
-    const build = await prisma.build.findUnique({
-      where: { id: buildId },
-      select: {
-        userId: true,
-        vehicleJson: true,
-        presentationJson: true,
-        planJson: true,
-        assumptionsJson: true,
-      },
-    });
+    let systemPrompt = '';
+    if (buildId) {
+      const build = await prisma.build.findUnique({
+        where: { id: buildId },
+        select: {
+          userId: true,
+          vehicleJson: true,
+          presentationJson: true,
+          planJson: true,
+          assumptionsJson: true,
+        },
+      });
 
-    if (!build) {
-      return NextResponse.json({ error: 'Build not found' }, { status: 404 });
-    }
+      if (!build) {
+        return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+      }
 
-    if (build.userId !== session.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      if (build.userId !== session.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+
+      systemPrompt = buildSystemPromptFromBuild(build);
+    } else {
+      systemPrompt = getGlobalSystemPrompt();
     }
 
     const thread = await prisma.chatThread.findFirst({
-      where: { userId: session.userId, buildId },
+      where: { userId: session.userId, buildId: buildId || null },
       include: {
         messages: {
           orderBy: { createdAt: 'asc' },
@@ -53,9 +57,8 @@ export async function GET(request: Request) {
       },
     });
 
-    const systemPrompt = buildSystemPromptFromBuild(build);
     const history = (thread?.messages || []).map((m) => ({
-      role: m.role as 'user' | 'model',
+      role: m.role === 'assistant' ? 'model' : 'user',
       content: m.content,
     }));
 
@@ -90,25 +93,24 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const buildId = searchParams.get('buildId');
-    if (!buildId) {
-      return NextResponse.json({ error: 'buildId is required' }, { status: 400 });
-    }
 
-    const build = await prisma.build.findUnique({
-      where: { id: buildId },
-      select: { userId: true },
-    });
+    if (buildId) {
+      const build = await prisma.build.findUnique({
+        where: { id: buildId },
+        select: { userId: true },
+      });
 
-    if (!build) {
-      return NextResponse.json({ error: 'Build not found' }, { status: 404 });
-    }
+      if (!build) {
+        return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+      }
 
-    if (build.userId !== session.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      if (build.userId !== session.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
     }
 
     const thread = await prisma.chatThread.findFirst({
-      where: { userId: session.userId, buildId },
+      where: { userId: session.userId, buildId: buildId || null },
       select: { id: true },
     });
 
@@ -143,22 +145,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { buildId, message } = validateRequest(chatSchema, body);
 
-    // Verify build ownership
-    const build = await prisma.build.findUnique({
-      where: { id: buildId },
-      select: { userId: true },
-    });
+    if (buildId) {
+      // Verify build ownership
+      const build = await prisma.build.findUnique({
+        where: { id: buildId },
+        select: { userId: true },
+      });
 
-    if (!build) {
-      return NextResponse.json({ error: 'Build not found' }, { status: 404 });
-    }
+      if (!build) {
+        return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+      }
 
-    if (build.userId !== session.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      if (build.userId !== session.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
     }
 
     // Process chat
-    const result = await processChat(session.userId, buildId, message);
+    const result = await processChat(session.userId, buildId || null, message);
 
     return NextResponse.json({
       reply: result.reply,

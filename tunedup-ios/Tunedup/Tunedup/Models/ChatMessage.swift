@@ -24,7 +24,7 @@ enum ChatRole: String, Codable {
 // MARK: - Chat Request/Response
 
 struct ChatRequest: Codable {
-    let buildId: String
+    let buildId: String?
     let message: String
 }
 

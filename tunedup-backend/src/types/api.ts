@@ -113,7 +113,7 @@ export interface BuildDetailResponse {
 
 // Chat
 export interface ChatRequest {
-  buildId: string;
+  buildId?: string;
   message: string;
 }
 
@@ -154,6 +154,60 @@ export interface UsageResponse {
   warning: '50_percent' | '10_percent' | null;
   blocked: boolean;
   resetsAt: string;
+}
+
+// Build Progress
+export interface ModProgressItem {
+  modId: string;
+  status: 'pending' | 'purchased' | 'installed';
+  purchasedAt: string | null;
+  installedAt: string | null;
+  notes: string | null;
+}
+
+export interface ProgressStats {
+  total: number;
+  purchased: number;
+  installed: number;
+}
+
+export interface BuildProgressResponse {
+  progress: ModProgressItem[];
+  stats: ProgressStats;
+}
+
+export interface ProgressUpdateRequest {
+  status: 'pending' | 'purchased' | 'installed';
+  notes?: string;
+}
+
+// Install Guide
+export interface InstallGuideRequest {
+  modId: string;
+}
+
+export interface InstallStep {
+  number: number;
+  title: string;
+  description: string;
+  warning?: string;
+}
+
+export interface InstallGuide {
+  title: string;
+  recommendation: 'diy' | 'shop';
+  shopReason?: string;
+  difficulty: number;
+  timeEstimate: string;
+  tools: string[];
+  steps: InstallStep[];
+  tips: string[];
+  warnings: string[];
+}
+
+export interface InstallGuideResponse {
+  guide: InstallGuide;
+  tokensUsed: number;
 }
 
 // Error responses

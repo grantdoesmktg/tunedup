@@ -79,25 +79,54 @@ class APIClient {
 
     // MARK: - Chat Endpoints
 
-    func sendChatMessage(buildId: String, message: String) async throws -> ChatResponse {
+    func sendChatMessage(buildId: String?, message: String) async throws -> ChatResponse {
         let request = ChatRequest(buildId: buildId, message: message)
         return try await post("/api/chat", body: request, authenticated: true)
     }
 
-    func getChatHistory(buildId: String) async throws -> ChatHistoryResponse {
-        let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
-        return try await get("/api/chat?buildId=\(encoded)", authenticated: true)
+    func getChatHistory(buildId: String?) async throws -> ChatHistoryResponse {
+        if let buildId {
+            let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+            return try await get("/api/chat?buildId=\(encoded)", authenticated: true)
+        }
+        return try await get("/api/chat", authenticated: true)
     }
 
-    func resetChat(buildId: String) async throws {
-        let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
-        let _: SuccessResponse = try await delete("/api/chat?buildId=\(encoded)", authenticated: true)
+    func resetChat(buildId: String?) async throws {
+        if let buildId {
+            let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+            let _: SuccessResponse = try await delete("/api/chat?buildId=\(encoded)", authenticated: true)
+        } else {
+            let _: SuccessResponse = try await delete("/api/chat", authenticated: true)
+        }
     }
 
     // MARK: - Usage Endpoints
 
     func getUsage() async throws -> UsageResponse {
         return try await get("/api/usage", authenticated: true)
+    }
+
+    // MARK: - Build Progress Endpoints
+
+    func getBuildProgress(_ buildId: String) async throws -> BuildProgressResponse {
+        let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+        return try await get("/api/builds/\(encoded)/progress", authenticated: true)
+    }
+
+    func updateModProgress(buildId: String, modId: String, status: ProgressStatus, notes: String? = nil) async throws -> ModProgress {
+        let encodedBuildId = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+        let encodedModId = modId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? modId
+        let request = ModProgressUpdateRequest(status: status, notes: notes)
+        return try await patch("/api/builds/\(encodedBuildId)/progress/\(encodedModId)", body: request, authenticated: true)
+    }
+
+    // MARK: - Install Guide Endpoints
+
+    func generateInstallGuide(buildId: String, modId: String) async throws -> InstallGuideResponse {
+        let encoded = buildId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? buildId
+        let request = InstallGuideRequest(modId: modId)
+        return try await post("/api/builds/\(encoded)/install-guide", body: request, authenticated: true)
     }
 
     // MARK: - HTTP Methods
@@ -116,6 +145,13 @@ class APIClient {
 
     private func delete<T: Decodable>(_ path: String, authenticated: Bool = false) async throws -> T {
         let request = try buildRequest(path: path, method: "DELETE", authenticated: authenticated)
+        return try await execute(request)
+    }
+
+    private func patch<T: Decodable, B: Encodable>(_ path: String, body: B, authenticated: Bool = false) async throws -> T {
+        var request = try buildRequest(path: path, method: "PATCH", authenticated: authenticated)
+        request.httpBody = try encoder.encode(body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         return try await execute(request)
     }
 
